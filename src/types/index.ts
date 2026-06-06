@@ -26,3 +26,25 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const CRAVING_DURATION_SECONDS = 600;
+
+export const ANALYTICS_USER_ID_KEY = "anonymous_user_id";
+
+export type AnalyticsEventName =
+  | "app_opened"
+  | "onboarding_completed"
+  | "settings_updated"
+  | "craving_started"
+  | "trigger_selected"
+  | "craving_finished"
+  | "craving_relapse"
+  | "craving_timer_expired"
+  | "admin_opened"
+  | "admin_data_reset";
+
+export type AnalyticsEventRow = {
+  id?: string;
+  user_id: string;
+  event_name: AnalyticsEventName;
+  payload: Record<string, unknown>;
+  created_at?: string;
+};

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
+import { getAnonymousUserId, trackEvent } from "@/lib/analytics";
 import CravingMode from "@/components/CravingMode";
 import Header from "@/components/Header";
 import Onboarding from "@/components/Onboarding";
@@ -134,11 +135,44 @@ export default function Home() {
   const isClient = useIsClient();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [referenceTime] = useState(() => Date.now());
+  const appOpenedTracked = useRef(false);
+  const settingsBaselineSet = useRef(false);
 
   useEffect(() => {
     if (!isClient) return;
     dispatch({ type: "HYDRATE", payload: loadAppData() });
   }, [isClient]);
+
+  useEffect(() => {
+    if (!state.hydrated || appOpenedTracked.current) return;
+
+    getAnonymousUserId();
+    trackEvent("app_opened", {
+      onboarding_completed: state.onboardingCompleted,
+    });
+    appOpenedTracked.current = true;
+  }, [state.hydrated, state.onboardingCompleted]);
+
+  useEffect(() => {
+    if (!state.hydrated || !state.onboardingCompleted) return;
+
+    if (!settingsBaselineSet.current) {
+      settingsBaselineSet.current = true;
+      return;
+    }
+
+    trackEvent("settings_updated", {
+      quit_date: state.quitDate,
+      cigarettes_per_day: state.cigarettesPerDay,
+      pack_price: state.packPrice,
+    });
+  }, [
+    state.hydrated,
+    state.onboardingCompleted,
+    state.quitDate,
+    state.cigarettesPerDay,
+    state.packPrice,
+  ]);
 
   useEffect(() => {
     if (!state.hydrated) return;
@@ -170,6 +204,10 @@ export default function Home() {
 
     const timer = window.setTimeout(() => {
       if (state.secondsLeft <= 1) {
+        trackEvent("craving_timer_expired", {
+          trigger: state.selectedTrigger || null,
+          seconds_left: state.secondsLeft,
+        });
         dispatch({ type: "END_CRAVING" });
       } else {
         dispatch({ type: "TICK_CRAVING" });
@@ -177,7 +215,7 @@ export default function Home() {
     }, 1000);
 
     return () => window.clearTimeout(timer);
-  }, [state.cravingMode, state.secondsLeft]);
+  }, [state.cravingMode, state.secondsLeft, state.selectedTrigger]);
 
   const smokeFreeDays = getSmokeFreeDays(state.quitDate, referenceTime);
   const savedMoney = Math.round(
@@ -212,7 +250,16 @@ export default function Home() {
         onPersonalReasonChange={(value) =>
           dispatch({ type: "SET_PERSONAL_REASON", value })
         }
-        onComplete={() => dispatch({ type: "COMPLETE_ONBOARDING" })}
+        onComplete={() => {
+          const quitDate = state.quitDate || todayISO();
+          dispatch({ type: "COMPLETE_ONBOARDING" });
+          trackEvent("onboarding_completed", {
+            quit_date: quitDate,
+            cigarettes_per_day: state.cigarettesPerDay,
+            pack_price: state.packPrice,
+            has_personal_reason: Boolean(state.personalReason.trim()),
+          });
+        }}
       />
     );
   }
@@ -249,7 +296,10 @@ export default function Home() {
         {!state.cravingMode ? (
           <button
             type="button"
-            onClick={() => dispatch({ type: "START_CRAVING" })}
+            onClick={() => {
+              dispatch({ type: "START_CRAVING" });
+              trackEvent("craving_started");
+            }}
             className="min-h-14 w-full rounded-3xl bg-red-500 py-5 text-xl font-bold text-white transition-transform active:scale-95"
           >
             Хочу курить
@@ -260,11 +310,24 @@ export default function Home() {
             personalReason={state.personalReason}
             triggers={state.triggers}
             selectedTrigger={state.selectedTrigger}
-            onSelectTrigger={(name) =>
-              dispatch({ type: "SELECT_TRIGGER", name })
-            }
-            onFinish={() => dispatch({ type: "FINISH_CRAVING" })}
-            onRelapse={() => dispatch({ type: "RELAPSE" })}
+            onSelectTrigger={(name) => {
+              dispatch({ type: "SELECT_TRIGGER", name });
+              trackEvent("trigger_selected", { trigger: name });
+            }}
+            onFinish={() => {
+              dispatch({ type: "FINISH_CRAVING" });
+              trackEvent("craving_finished", {
+                trigger: state.selectedTrigger || null,
+                wins: state.wins + 1,
+              });
+            }}
+            onRelapse={() => {
+              dispatch({ type: "RELAPSE" });
+              trackEvent("craving_relapse", {
+                trigger: state.selectedTrigger || null,
+                relapses: state.relapses + 1,
+              });
+            }}
           />
         )}
 

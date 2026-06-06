@@ -60,6 +60,14 @@ export function loadAppData(): AppData {
   };
 }
 
+export function clearAppData() {
+  if (typeof window === "undefined") return;
+
+  Object.values(STORAGE_KEYS).forEach((key) => {
+    localStorage.removeItem(key);
+  });
+}
+
 export function saveAppData(data: AppData) {
   if (typeof window === "undefined") return;
 
