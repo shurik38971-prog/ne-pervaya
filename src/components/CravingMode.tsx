@@ -184,7 +184,7 @@ export default function CravingMode({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-2">
+      <div className="shrink-0 px-4 pb-3 pt-2 text-center">
         <p className="text-5xl font-extrabold tabular-nums leading-none tracking-tight">
           {timeLabel}
         </p>
@@ -198,7 +198,7 @@ export default function CravingMode({
         )}
       </div>
 
-      <footer className="shrink-0 space-y-2 px-4 pb-6">
+      <footer className="flex min-h-0 flex-1 flex-col justify-end gap-2 px-4 pb-6">
         <RewireMessageCard message={rewirePick.message} variant="craving" />
         <p className="text-center text-[11px] text-white/65">
           Кнопки результата появятся, когда таймер дойдёт до нуля
