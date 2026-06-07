@@ -1,5 +1,11 @@
-const CACHE_NAME = "ne-pervaya-v2";
+const CACHE_NAME = "ne-pervaya-v3";
+const DB_NAME = "ne-pervaya";
+const DB_VERSION = 1;
+const TIMER_STORE = "timers";
+const CRAVING_ENDS_AT_KEY = "cravingEndsAt";
+
 let cravingTimerId = null;
+
 const PRECACHE_URLS = [
   "/",
   "/manifest.json",
@@ -8,6 +14,134 @@ const PRECACHE_URLS = [
   "/icons/apple-touch-icon.png",
   "/offline.html",
 ];
+
+const NOTIFICATION_OPTIONS = {
+  body: "10 минут прошли. Открой приложение и отметь результат.",
+  icon: "/icons/icon-192.png",
+  badge: "/icons/icon-192.png",
+  tag: "craving-timer-complete",
+  requireInteraction: true,
+  data: { url: "/" },
+};
+
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(TIMER_STORE)) {
+        db.createObjectStore(TIMER_STORE);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveCravingEndsAt(endsAt) {
+  const db = await openDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(TIMER_STORE, "readwrite");
+    tx.objectStore(TIMER_STORE).put(endsAt, CRAVING_ENDS_AT_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function getCravingEndsAt() {
+  const db = await openDb();
+  const value = await new Promise((resolve, reject) => {
+    const tx = db.transaction(TIMER_STORE, "readonly");
+    const request = tx.objectStore(TIMER_STORE).get(CRAVING_ENDS_AT_KEY);
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return typeof value === "number" ? value : null;
+}
+
+async function clearCravingEndsAt() {
+  const db = await openDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(TIMER_STORE, "readwrite");
+    tx.objectStore(TIMER_STORE).delete(CRAVING_ENDS_AT_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function showCravingCompleteNotification() {
+  try {
+    await self.registration.showNotification("Не первая", NOTIFICATION_OPTIONS);
+  } catch (error) {
+    console.warn("[sw] showNotification failed:", error);
+  }
+}
+
+function clearCravingTimer() {
+  if (cravingTimerId) clearTimeout(cravingTimerId);
+  cravingTimerId = null;
+}
+
+function scheduleCravingNotification(endsAt) {
+  clearCravingTimer();
+
+  const tick = async () => {
+    let target = endsAt;
+
+    try {
+      const stored = await getCravingEndsAt();
+      if (typeof stored === "number") {
+        target = stored;
+      }
+    } catch (error) {
+      console.warn("[sw] failed to read craving timer:", error);
+    }
+
+    const remaining = target - Date.now();
+
+    if (remaining <= 0) {
+      clearCravingTimer();
+      await showCravingCompleteNotification();
+      await clearCravingEndsAt();
+      return;
+    }
+
+    const nextDelay = Math.min(remaining, 15000);
+    cravingTimerId = setTimeout(tick, nextDelay);
+  };
+
+  void tick();
+}
+
+async function startCravingTimer(endsAt) {
+  if (typeof endsAt !== "number" || endsAt <= Date.now()) return;
+
+  await saveCravingEndsAt(endsAt);
+  scheduleCravingNotification(endsAt);
+}
+
+async function stopCravingTimer() {
+  clearCravingTimer();
+  await clearCravingEndsAt();
+}
+
+async function resumeCravingTimerIfNeeded() {
+  const endsAt = await getCravingEndsAt();
+  if (!endsAt) return;
+
+  if (endsAt <= Date.now()) {
+    await showCravingCompleteNotification();
+    await clearCravingEndsAt();
+    return;
+  }
+
+  scheduleCravingNotification(endsAt);
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -20,16 +154,19 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        )
-      )
-      .then(() => self.clients.claim())
+    Promise.all([
+      caches
+        .keys()
+        .then((keys) =>
+          Promise.all(
+            keys
+              .filter((key) => key !== CACHE_NAME)
+              .map((key) => caches.delete(key))
+          )
+        ),
+      self.clients.claim(),
+      resumeCravingTimerIfNeeded(),
+    ])
   );
 });
 
@@ -37,26 +174,21 @@ self.addEventListener("message", (event) => {
   const data = event.data;
   if (!data || typeof data !== "object") return;
 
-  if (data.type === "CRAVING_TIMER_START") {
-    if (cravingTimerId) clearTimeout(cravingTimerId);
+  const run = (promise) => {
+    if ("waitUntil" in event && typeof event.waitUntil === "function") {
+      event.waitUntil(promise);
+      return;
+    }
+    void promise;
+  };
 
-    const delay = Math.max(0, data.endsAt - Date.now());
-    cravingTimerId = setTimeout(() => {
-      cravingTimerId = null;
-      self.registration.showNotification("Не первая", {
-        body: "10 минут прошли. Открой приложение и отметь результат.",
-        icon: "/icons/icon-192.png",
-        badge: "/icons/icon-192.png",
-        tag: "craving-timer-complete",
-        requireInteraction: true,
-        data: { url: "/" },
-      });
-    }, delay);
+  if (data.type === "CRAVING_TIMER_START") {
+    run(startCravingTimer(data.endsAt));
+    return;
   }
 
   if (data.type === "CRAVING_TIMER_CLEAR") {
-    if (cravingTimerId) clearTimeout(cravingTimerId);
-    cravingTimerId = null;
+    run(stopCravingTimer());
   }
 });
 

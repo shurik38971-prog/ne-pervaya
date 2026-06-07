@@ -24,6 +24,7 @@ import {
   clearCravingTimerInWorker,
   notifyCravingTimerComplete,
   requestCravingNotifications,
+  resyncCravingTimerInWorker,
   scheduleCravingTimerInWorker,
   tryFocusApp,
 } from "@/lib/craving-timer";
@@ -149,7 +150,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const completeTimer = () => {
       if (timerCompletedRef.current) return;
       timerCompletedRef.current = true;
-      clearCravingTimerInWorker();
+      void clearCravingTimerInWorker();
       trackEvent("craving_timer_expired", {
         trigger: state.selectedTrigger || null,
         seconds_left: 0,
@@ -178,16 +179,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const interval = window.setInterval(tick, 1000);
 
     const onVisibility = () => {
-      if (document.visibilityState !== "visible") return;
-      tick();
-      tryFocusApp();
+      if (document.visibilityState === "visible") {
+        tick();
+        tryFocusApp();
+        return;
+      }
+
+      if (state.cravingEndsAt) {
+        void resyncCravingTimerInWorker(state.cravingEndsAt);
+      }
+    };
+
+    const onPageHide = () => {
+      if (state.cravingEndsAt) {
+        void resyncCravingTimerInWorker(state.cravingEndsAt);
+      }
     };
 
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onPageHide);
 
     return () => {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onPageHide);
     };
   }, [
     state.cravingMode,
@@ -221,8 +236,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       startCraving: () => {
         const endsAt = Date.now() + CRAVING_DURATION_SECONDS * 1000;
         dispatch({ type: "START_CRAVING" });
-        requestCravingNotifications();
-        scheduleCravingTimerInWorker(endsAt);
+        void (async () => {
+          await requestCravingNotifications();
+          await scheduleCravingTimerInWorker(endsAt);
+        })();
         trackEvent("craving_started");
       },
       selectTrigger: (name) => {
@@ -230,7 +247,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         trackEvent("trigger_selected", { trigger: name });
       },
       declareCravingWin: () => {
-        clearCravingTimerInWorker();
+        void clearCravingTimerInWorker();
         dispatch({ type: "DECLARE_CRAVING_WIN" });
         trackEvent("craving_finished", {
           trigger: state.selectedTrigger || null,
@@ -248,7 +265,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "CLOSE_CRAVING" });
       },
       relapse: () => {
-        clearCravingTimerInWorker();
+        void clearCravingTimerInWorker();
         dispatch({ type: "RELAPSE" });
         trackEvent("craving_relapse", {
           trigger: state.selectedTrigger || null,

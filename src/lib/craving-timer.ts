@@ -1,41 +1,61 @@
-export function requestCravingNotifications() {
-  if (typeof window === "undefined" || !("Notification" in window)) return;
+const CRAVING_ENDS_AT_KEY = "craving_timer_ends_at";
 
-  if (Notification.permission === "default") {
-    void Notification.requestPermission();
-  }
+export function persistCravingEndsAt(endsAt: number) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CRAVING_ENDS_AT_KEY, String(endsAt));
 }
 
-export function scheduleCravingTimerInWorker(endsAt: number) {
+export function clearPersistedCravingEndsAt() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(CRAVING_ENDS_AT_KEY);
+}
+
+export async function requestCravingNotifications() {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    return false;
+  }
+
+  if (Notification.permission === "granted") {
+    return true;
+  }
+
+  if (Notification.permission === "denied") {
+    return false;
+  }
+
+  const permission = await Notification.requestPermission();
+  return permission === "granted";
+}
+
+async function postToServiceWorker(message: Record<string, unknown>) {
   if (!("serviceWorker" in navigator)) return;
 
-  const post = (registration: ServiceWorkerRegistration) => {
-    registration.active?.postMessage({
-      type: "CRAVING_TIMER_START",
-      endsAt,
-    });
-  };
+  const registration = await navigator.serviceWorker.ready;
+
+  if (registration.active) {
+    registration.active.postMessage(message);
+  }
 
   if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({
-      type: "CRAVING_TIMER_START",
-      endsAt,
-    });
-    return;
+    navigator.serviceWorker.controller.postMessage(message);
   }
-
-  void navigator.serviceWorker.ready.then(post);
 }
 
-export function clearCravingTimerInWorker() {
+export async function scheduleCravingTimerInWorker(endsAt: number) {
   if (!("serviceWorker" in navigator)) return;
 
-  const message = { type: "CRAVING_TIMER_CLEAR" };
-
-  navigator.serviceWorker.controller?.postMessage(message);
-  void navigator.serviceWorker.ready.then((registration) => {
-    registration.active?.postMessage(message);
+  persistCravingEndsAt(endsAt);
+  await postToServiceWorker({
+    type: "CRAVING_TIMER_START",
+    endsAt,
   });
+}
+
+export async function clearCravingTimerInWorker() {
+  if (!("serviceWorker" in navigator)) return;
+
+  clearPersistedCravingEndsAt();
+  await postToServiceWorker({ type: "CRAVING_TIMER_CLEAR" });
 }
 
 export async function notifyCravingTimerComplete() {
@@ -57,12 +77,16 @@ export async function notifyCravingTimerComplete() {
   };
 
   if ("Notification" in window && Notification.permission === "granted") {
-    const notification = new Notification(title, options);
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
-    return;
+    try {
+      const notification = new Notification(title, options);
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+      return;
+    } catch {
+      // Fall through to service worker notification.
+    }
   }
 
   if ("serviceWorker" in navigator) {
@@ -74,4 +98,9 @@ export async function notifyCravingTimerComplete() {
 export function tryFocusApp() {
   if (typeof window === "undefined") return;
   window.focus();
+}
+
+export async function resyncCravingTimerInWorker(endsAt: number | null) {
+  if (!endsAt || endsAt <= Date.now()) return;
+  await scheduleCravingTimerInWorker(endsAt);
 }
