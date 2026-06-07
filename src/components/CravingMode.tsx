@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import RewireMessageCard from "@/components/RewireMessageCard";
 import { trackEvent } from "@/lib/analytics";
 import { pickRewireMessage } from "@/lib/rewire-messages";
 import type { CravingHelpStep, HelpedMethod, Trigger } from "@/types";
@@ -127,7 +128,7 @@ export default function CravingMode({
 
   if (timerDone) {
     return (
-      <section className="flex h-full min-h-0 flex-col bg-red-500 px-4 pb-8 pt-8 text-white">
+      <section className="flex h-full min-h-0 flex-col bg-red-600 px-4 pb-8 pt-8 text-white">
         <div className="shrink-0 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-white/80">
             Время вышло
@@ -141,13 +142,8 @@ export default function CravingMode({
           )}
         </div>
 
-        <div className="mt-6 shrink-0 rounded-2xl bg-black/20 px-4 py-4 text-left">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-red-200">
-            Перепрошивка
-          </p>
-          <p className="mt-2 text-base font-semibold leading-snug">
-            {rewirePick.message}
-          </p>
+        <div className="mt-5 shrink-0">
+          <RewireMessageCard message={rewirePick.message} variant="craving" />
         </div>
 
         <div className="mt-auto flex shrink-0 flex-col gap-2 pt-6">
@@ -171,8 +167,8 @@ export default function CravingMode({
   }
 
   return (
-    <section className="flex h-full min-h-0 flex-col bg-red-500 text-white">
-      <header className="shrink-0 px-4 pt-5">
+    <section className="flex h-full min-h-0 flex-col bg-red-600 text-white">
+      <header className="shrink-0 px-4 pt-4">
         <p className="text-center text-sm font-semibold text-white/95">
           Что произошло?
         </p>
@@ -188,30 +184,23 @@ export default function CravingMode({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-3">
-        <p className="text-6xl font-extrabold tabular-nums leading-none tracking-tight">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-2">
+        <p className="text-5xl font-extrabold tabular-nums leading-none tracking-tight">
           {timeLabel}
         </p>
-        <p className="mt-3 text-sm font-medium text-white/85">
+        <p className="mt-2 text-sm font-medium text-white/85">
           Переживи ближайшие 10 минут
         </p>
         {personalReason.trim() && (
-          <p className="mt-4 line-clamp-2 max-w-sm text-center text-sm font-medium leading-snug text-white/90">
+          <p className="mt-3 line-clamp-2 max-w-sm text-center text-xs font-medium leading-snug text-white/80">
             &ldquo;{personalReason}&rdquo;
           </p>
         )}
       </div>
 
-      <footer className="shrink-0 space-y-3 px-4 pb-8">
-        <div className="rounded-2xl bg-black/20 px-4 py-3 text-left">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-red-200">
-            Перепрошивка
-          </p>
-          <p className="mt-1.5 text-sm font-semibold leading-snug">
-            {rewirePick.message}
-          </p>
-        </div>
-        <p className="text-center text-[11px] text-white/70">
+      <footer className="shrink-0 space-y-2 px-4 pb-6">
+        <RewireMessageCard message={rewirePick.message} variant="craving" />
+        <p className="text-center text-[11px] text-white/65">
           Кнопки результата появятся, когда таймер дойдёт до нуля
         </p>
       </footer>
