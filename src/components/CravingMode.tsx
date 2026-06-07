@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import RewireMessageCard from "@/components/RewireMessageCard";
 import { trackEvent } from "@/lib/analytics";
 import { pickRewireMessage } from "@/lib/rewire-messages";
 import type { CravingHelpStep, HelpedMethod, Trigger } from "@/types";
@@ -19,10 +18,29 @@ type CravingModeProps = {
   onRelapse: () => void;
 };
 
-const triggerButtonClass = (isSelected: boolean) =>
-  `flex min-h-9 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-xs font-bold transition-colors active:scale-95 ${
-    isSelected ? "bg-white text-red-500" : "bg-red-600 text-white"
-  }`;
+function TriggerChip({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`min-h-10 rounded-xl px-2 py-2 text-center text-xs font-bold leading-tight transition-colors active:scale-95 ${
+        selected
+          ? "bg-white text-red-600 shadow-sm"
+          : "bg-red-700/70 text-white ring-1 ring-white/20"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 
 export default function CravingMode({
   secondsLeft,
@@ -42,6 +60,7 @@ export default function CravingMode({
   const rewireTrackedRef = useRef(false);
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
+  const timeLabel = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
   useEffect(() => {
     if (rewireTrackedRef.current) return;
@@ -68,21 +87,23 @@ export default function CravingMode({
 
   if (cravingHelpStep === "pick_method") {
     return (
-      <section className="w-full min-w-0 rounded-3xl bg-emerald-600 p-3 text-center">
-        <p className="text-xs font-medium uppercase tracking-widest text-emerald-100/90">
-          Победа
-        </p>
-        <h2 className="mt-2 text-xl font-extrabold leading-tight">
-          Что помогло тебе справиться?
-        </h2>
+      <section className="flex h-full min-h-0 flex-col bg-emerald-600 px-4 pb-8 pt-6 text-white">
+        <div className="shrink-0 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-100/90">
+            Победа
+          </p>
+          <h2 className="mt-2 text-2xl font-extrabold leading-tight">
+            Что помогло?
+          </h2>
+        </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-1.5">
+        <div className="mt-5 grid flex-1 grid-cols-2 content-start gap-2">
           {helpedMethods.map((method) => (
             <button
               key={method.name}
               type="button"
               onClick={() => onSelectHelpedMethod(method.name)}
-              className="min-h-10 rounded-xl bg-emerald-700 px-2.5 py-2 text-left text-xs font-bold text-white transition-colors active:scale-95 active:bg-emerald-800"
+              className="min-h-12 rounded-2xl bg-emerald-700 px-3 py-3 text-sm font-bold text-white active:scale-95 active:bg-emerald-800"
             >
               {method.name}
             </button>
@@ -94,110 +115,106 @@ export default function CravingMode({
 
   if (cravingHelpStep === "success") {
     return (
-      <section className="w-full min-w-0 rounded-3xl bg-emerald-600 p-5 text-center">
-        <p className="text-3xl">✓</p>
-        <h2 className="mt-2 text-xl font-extrabold">Отлично.</h2>
-        <p className="mt-2 text-sm font-medium leading-snug text-emerald-50">
+      <section className="flex h-full min-h-0 flex-col items-center justify-center bg-emerald-600 px-6 text-center text-white">
+        <p className="text-5xl">✓</p>
+        <h2 className="mt-4 text-3xl font-extrabold">Отлично.</h2>
+        <p className="mt-3 max-w-xs text-base leading-relaxed text-emerald-50">
           Ты пережил ещё одну волну тяги.
         </p>
       </section>
     );
   }
 
-  return (
-    <section className="w-full min-w-0 rounded-3xl bg-red-500 p-3 text-center">
-      {!timerDone ? (
-        <>
-          <p className="text-sm font-semibold">Что произошло?</p>
-
-          <div className="mt-2 grid grid-cols-2 gap-1.5">
-            {triggers.map((trigger) => {
-              const isSelected = selectedTrigger === trigger.name;
-
-              return (
-                <button
-                  key={trigger.name}
-                  type="button"
-                  onClick={() => onSelectTrigger(trigger.name)}
-                  className={triggerButtonClass(isSelected)}
-                >
-                  <span
-                    className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-2 ${
-                      isSelected
-                        ? "border-red-500 bg-red-500"
-                        : "border-white/70 bg-transparent"
-                    }`}
-                    aria-hidden
-                  >
-                    {isSelected && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                    )}
-                  </span>
-                  <span className="leading-tight">{trigger.name}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-2.5">
-            <p className="text-[11px] opacity-90">Переживи ближайшие 10 минут</p>
-            <p className="mt-0.5 text-4xl font-bold tabular-nums leading-none">
-              {minutes}:{seconds.toString().padStart(2, "0")}
-            </p>
-          </div>
-
-          {personalReason.trim() && (
-            <div className="mt-2 rounded-2xl border border-white/20 bg-red-600/70 px-3 py-2 text-left">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-white/75">
-                Ты сам написал:
-              </p>
-              <p className="mt-1 text-sm font-semibold leading-snug text-white">
-                &ldquo;{personalReason}&rdquo;
-              </p>
-            </div>
-          )}
-
-          <RewireMessageCard message={rewirePick.message} variant="craving" />
-
-          <p className="mt-2 text-[10px] leading-tight opacity-75">
-            Кнопки результата появятся, когда таймер дойдёт до нуля
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="text-xs font-medium uppercase tracking-widest opacity-90">
+  if (timerDone) {
+    return (
+      <section className="flex h-full min-h-0 flex-col bg-red-500 px-4 pb-8 pt-8 text-white">
+        <div className="shrink-0 text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-white/80">
             Время вышло
           </p>
-          <p className="mt-1 text-3xl font-extrabold tabular-nums">0:00</p>
-          <p className="mt-2 text-base font-semibold leading-snug">
-            10 минут позади. Как ты?
-          </p>
-
+          <p className="mt-2 text-5xl font-extrabold tabular-nums">0:00</p>
+          <p className="mt-3 text-lg font-semibold">10 минут позади. Как ты?</p>
           {selectedTrigger && (
-            <p className="mt-2 rounded-xl bg-red-600/50 px-3 py-2 text-xs">
-              Триггер: {selectedTrigger}
+            <p className="mt-3 inline-block rounded-full bg-red-700/60 px-3 py-1 text-sm">
+              {selectedTrigger}
             </p>
           )}
+        </div>
 
-          <RewireMessageCard message={rewirePick.message} variant="craving" />
+        <div className="mt-6 shrink-0 rounded-2xl bg-black/20 px-4 py-4 text-left">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-red-200">
+            Перепрошивка
+          </p>
+          <p className="mt-2 text-base font-semibold leading-snug">
+            {rewirePick.message}
+          </p>
+        </div>
 
+        <div className="mt-auto flex shrink-0 flex-col gap-2 pt-6">
           <button
             type="button"
             onClick={onDeclareWin}
-            className="mt-3 min-h-12 w-full rounded-2xl bg-white py-3 text-base font-bold text-red-500 active:scale-95"
+            className="min-h-14 w-full rounded-2xl bg-white py-4 text-lg font-bold text-red-600 active:scale-95"
           >
             Я справился
           </button>
-
           <button
             type="button"
             onClick={onRelapse}
-            className="mt-2 min-h-12 w-full rounded-2xl bg-red-700 py-3 text-base font-bold text-white active:scale-95"
+            className="min-h-14 w-full rounded-2xl bg-red-800 py-4 text-lg font-bold text-white active:scale-95"
           >
             Я сорвался
           </button>
-        </>
-      )}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="flex h-full min-h-0 flex-col bg-red-500 text-white">
+      <header className="shrink-0 px-4 pt-5">
+        <p className="text-center text-sm font-semibold text-white/95">
+          Что произошло?
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-1.5">
+          {triggers.map((trigger) => (
+            <TriggerChip
+              key={trigger.name}
+              label={trigger.name}
+              selected={selectedTrigger === trigger.name}
+              onSelect={() => onSelectTrigger(trigger.name)}
+            />
+          ))}
+        </div>
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-3">
+        <p className="text-6xl font-extrabold tabular-nums leading-none tracking-tight">
+          {timeLabel}
+        </p>
+        <p className="mt-3 text-sm font-medium text-white/85">
+          Переживи ближайшие 10 минут
+        </p>
+        {personalReason.trim() && (
+          <p className="mt-4 line-clamp-2 max-w-sm text-center text-sm font-medium leading-snug text-white/90">
+            &ldquo;{personalReason}&rdquo;
+          </p>
+        )}
+      </div>
+
+      <footer className="shrink-0 space-y-3 px-4 pb-8">
+        <div className="rounded-2xl bg-black/20 px-4 py-3 text-left">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-red-200">
+            Перепрошивка
+          </p>
+          <p className="mt-1.5 text-sm font-semibold leading-snug">
+            {rewirePick.message}
+          </p>
+        </div>
+        <p className="text-center text-[11px] text-white/70">
+          Кнопки результата появятся, когда таймер дойдёт до нуля
+        </p>
+      </footer>
     </section>
   );
 }
