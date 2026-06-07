@@ -17,30 +17,47 @@
 }
 
 html {
-  overflow-x: hidden;
+  height: 100%;
+  overflow: hidden;
   -webkit-text-size-adjust: 100%;
-  min-height: 100%;
 }
 
 body {
+  height: 100%;
+  overflow: hidden;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
+}
+
+.app-scroll {
+  height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  min-height: 100dvh;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
   padding-top: var(--safe-top);
   padding-right: var(--safe-right);
   padding-bottom: var(--safe-bottom);
   padding-left: var(--safe-left);
 }
 
-@media (display-mode: standalone) {
-  body {
-    overscroll-behavior-y: contain;
-  }
+.app-scroll.is-locked {
+  overflow: hidden;
+}
+
+.overlay-scroll {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
 }
 
 input,

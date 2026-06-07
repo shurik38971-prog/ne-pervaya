@@ -76,7 +76,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <link rel="manifest" href="/manifest.json" />
@@ -89,10 +89,12 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Не первая" />
       </head>
-      <body className="min-h-dvh overflow-x-hidden bg-zinc-950 text-white">
+      <body className="h-full bg-zinc-950 text-white">
         <PwaRegister />
-        {children}
-        <InstallPrompt />
+        <div className="app-scroll">
+          {children}
+          <InstallPrompt />
+        </div>
       </body>
     </html>
   );

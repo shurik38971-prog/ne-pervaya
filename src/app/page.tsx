@@ -39,7 +39,7 @@ function AppContent() {
   }
 
   return (
-    <main className="w-full overflow-x-hidden bg-zinc-950">
+    <main className="w-full min-w-0 bg-zinc-950">
       <AppShell />
     </main>
   );

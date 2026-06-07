@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import BottomNav, { type AppTab } from "@/components/BottomNav";
 import CravingMode from "@/components/CravingMode";
 import HelpTab from "@/components/tabs/HelpTab";
@@ -11,6 +12,7 @@ import { useApp } from "@/context/AppProvider";
 
 export default function AppShell() {
   const [activeTab, setActiveTab] = useState<AppTab>("today");
+  const [mounted, setMounted] = useState(false);
   const {
     state,
     selectTrigger,
@@ -19,6 +21,43 @@ export default function AppShell() {
     completeCravingWin,
     relapse,
   } = useApp();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const scrollRoot = document.querySelector(".app-scroll");
+    if (!scrollRoot) return;
+
+    scrollRoot.classList.toggle("is-locked", state.cravingMode);
+
+    return () => {
+      scrollRoot.classList.remove("is-locked");
+    };
+  }, [state.cravingMode]);
+
+  const cravingOverlay =
+    state.cravingMode && mounted ? (
+      <div className="overlay-scroll bg-zinc-950 px-4 py-6">
+        <div className="mx-auto w-full max-w-md py-2 pb-8">
+          <CravingMode
+            secondsLeft={state.secondsLeft}
+            timerDone={state.cravingTimerDone}
+            cravingHelpStep={state.cravingHelpStep}
+            personalReason={state.personalReason}
+            triggers={state.triggers}
+            helpedMethods={state.helpedMethods}
+            selectedTrigger={state.selectedTrigger}
+            onSelectTrigger={selectTrigger}
+            onDeclareWin={declareCravingWin}
+            onSelectHelpedMethod={selectHelpedMethod}
+            onCompleteWin={completeCravingWin}
+            onRelapse={relapse}
+          />
+        </div>
+      </div>
+    ) : null;
 
   return (
     <>
@@ -31,26 +70,7 @@ export default function AppShell() {
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {state.cravingMode && (
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-zinc-950 px-4 py-6 [-webkit-overflow-scrolling:touch]">
-          <div className="mx-auto w-full max-w-md py-2">
-            <CravingMode
-              secondsLeft={state.secondsLeft}
-              timerDone={state.cravingTimerDone}
-              cravingHelpStep={state.cravingHelpStep}
-              personalReason={state.personalReason}
-              triggers={state.triggers}
-              helpedMethods={state.helpedMethods}
-              selectedTrigger={state.selectedTrigger}
-              onSelectTrigger={selectTrigger}
-              onDeclareWin={declareCravingWin}
-              onSelectHelpedMethod={selectHelpedMethod}
-              onCompleteWin={completeCravingWin}
-              onRelapse={relapse}
-            />
-          </div>
-        </div>
-      )}
+      {cravingOverlay && createPortal(cravingOverlay, document.body)}
     </>
   );
 }
