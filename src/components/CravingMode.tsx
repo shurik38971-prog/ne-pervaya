@@ -1,3 +1,6 @@
+import { useState } from "react";
+import RewireMessageCard from "@/components/RewireMessageCard";
+import { pickRewireMessage } from "@/lib/rewire-messages";
 import type { Trigger } from "@/types";
 
 type CravingModeProps = {
@@ -19,6 +22,7 @@ export default function CravingMode({
   onFinish,
   onRelapse,
 }: CravingModeProps) {
+  const [rewireMessage] = useState(() => pickRewireMessage());
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
 
@@ -35,6 +39,8 @@ export default function CravingMode({
           Ты сам написал: {personalReason}
         </p>
       )}
+
+      <RewireMessageCard message={rewireMessage} variant="craving" />
 
       <p className="mt-5 text-lg font-semibold">Что вызвало тягу?</p>
 
@@ -54,10 +60,6 @@ export default function CravingMode({
           </button>
         ))}
       </div>
-
-      <p className="mt-5 text-base font-medium leading-relaxed">
-        Тяга пройдёт. Сейчас главное — не дать старт первой сигарете.
-      </p>
 
       <button
         type="button"

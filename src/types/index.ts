@@ -45,6 +45,6 @@ export type AnalyticsEventRow = {
   id?: string;
   user_id: string;
   event_name: AnalyticsEventName;
-  payload: Record<string, unknown>;
+  properties: Record<string, unknown>;
   created_at?: string;
 };

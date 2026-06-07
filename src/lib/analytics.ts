@@ -36,7 +36,7 @@ async function sendEvent(
     const { error } = await supabase.from("events").insert({
       user_id: getAnonymousUserId(),
       event_name: eventName,
-      payload,
+      properties: payload,
     });
 
     if (error) {
