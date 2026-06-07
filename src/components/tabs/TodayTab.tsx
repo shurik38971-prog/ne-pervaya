@@ -7,20 +7,27 @@ export default function TodayTab() {
   const { state, smokeFreeDays, startCraving } = useApp();
 
   return (
-    <div className="flex min-h-[calc(100dvh-6.5rem)] flex-col">
-      <header className="pt-1">
-        <p className="text-sm font-medium uppercase tracking-widest text-red-500">
+    <div className="flex min-h-[calc(100dvh-6.5rem)] w-full min-w-0 flex-col">
+      <header className="w-full min-w-0 pt-1">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
           Не первая
         </p>
-        <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+
+        <h1 className="mt-3 text-4xl font-extrabold leading-[1.15] tracking-tight sm:text-5xl sm:leading-tight">
           Сегодня я не курю.
         </h1>
-        <p className="mt-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
-          Срыв начинается с первой сигареты.
-        </p>
+
+        <div className="mt-5 max-w-[20rem] text-base leading-relaxed text-zinc-400 sm:max-w-md sm:text-lg">
+          <p>
+            Антисрыв-приложение для тех,
+            <br />
+            кто решил не закурить первую сигарету сегодня.
+          </p>
+          <p className="mt-3">Потому что срыв начинается с первой.</p>
+        </div>
       </header>
 
-      <div className="mt-10">
+      <div className="mt-14 sm:mt-16">
         <TodayMetrics
           smokeFreeDays={smokeFreeDays}
           wins={state.wins}

@@ -34,6 +34,7 @@ export default function AppShell() {
           <div className="mx-auto flex min-h-full w-full max-w-md items-center">
             <CravingMode
               secondsLeft={state.secondsLeft}
+              timerDone={state.cravingTimerDone}
               personalReason={state.personalReason}
               triggers={state.triggers}
               selectedTrigger={state.selectedTrigger}

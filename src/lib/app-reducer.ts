@@ -8,6 +8,8 @@ export function todayISO() {
 export type UIState = {
   hydrated: boolean;
   cravingMode: boolean;
+  cravingTimerDone: boolean;
+  cravingEndsAt: number | null;
   secondsLeft: number;
   selectedTrigger: string;
 };
@@ -22,8 +24,8 @@ export type AppAction =
   | { type: "SET_PERSONAL_REASON"; value: string }
   | { type: "COMPLETE_ONBOARDING" }
   | { type: "START_CRAVING" }
-  | { type: "TICK_CRAVING" }
-  | { type: "END_CRAVING" }
+  | { type: "SET_SECONDS_LEFT"; value: number }
+  | { type: "TIMER_COMPLETE" }
   | { type: "SELECT_TRIGGER"; name: string }
   | { type: "FINISH_CRAVING" }
   | { type: "RELAPSE" };
@@ -32,6 +34,8 @@ export const initialAppState: AppState = {
   ...DEFAULT_APP_DATA,
   hydrated: false,
   cravingMode: false,
+  cravingTimerDone: false,
+  cravingEndsAt: null,
   secondsLeft: CRAVING_DURATION_SECONDS,
   selectedTrigger: "",
 };
@@ -58,17 +62,18 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         cravingMode: true,
+        cravingTimerDone: false,
+        cravingEndsAt: Date.now() + CRAVING_DURATION_SECONDS * 1000,
         secondsLeft: CRAVING_DURATION_SECONDS,
         selectedTrigger: "",
       };
-    case "TICK_CRAVING":
-      return { ...state, secondsLeft: state.secondsLeft - 1 };
-    case "END_CRAVING":
+    case "SET_SECONDS_LEFT":
+      return { ...state, secondsLeft: action.value };
+    case "TIMER_COMPLETE":
       return {
         ...state,
-        cravingMode: false,
-        secondsLeft: CRAVING_DURATION_SECONDS,
-        selectedTrigger: "",
+        cravingTimerDone: true,
+        secondsLeft: 0,
       };
     case "SELECT_TRIGGER":
       return {
@@ -85,6 +90,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         wins: state.wins + 1,
         cravingMode: false,
+        cravingTimerDone: false,
+        cravingEndsAt: null,
         secondsLeft: CRAVING_DURATION_SECONDS,
         selectedTrigger: "",
       };
@@ -93,6 +100,8 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         relapses: state.relapses + 1,
         cravingMode: false,
+        cravingTimerDone: false,
+        cravingEndsAt: null,
         secondsLeft: CRAVING_DURATION_SECONDS,
         selectedTrigger: "",
       };

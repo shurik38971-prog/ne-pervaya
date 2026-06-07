@@ -33,6 +33,12 @@ body {
   padding-left: var(--safe-left);
 }
 
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior: none;
+  }
+}
+
 input,
 textarea,
 select,

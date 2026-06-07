@@ -19,7 +19,15 @@ import {
   type AppAction,
   type AppState,
 } from "@/lib/app-reducer";
+import {
+  clearCravingTimerInWorker,
+  notifyCravingTimerComplete,
+  requestCravingNotifications,
+  scheduleCravingTimerInWorker,
+  tryFocusApp,
+} from "@/lib/craving-timer";
 import { loadAppData, saveAppData } from "@/lib/storage";
+import { CRAVING_DURATION_SECONDS } from "@/types";
 import { useIsClient } from "@/hooks/useIsClient";
 
 type AppContextValue = {
@@ -43,6 +51,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [referenceTime] = useState(() => Date.now());
   const appOpenedTracked = useRef(false);
   const settingsBaselineSet = useRef(false);
+  const timerCompletedRef = useRef(false);
 
   useEffect(() => {
     if (!isClient) return;
@@ -106,22 +115,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ]);
 
   useEffect(() => {
-    if (!state.cravingMode || state.secondsLeft <= 0) return;
+    if (!state.cravingMode) {
+      timerCompletedRef.current = false;
+      return;
+    }
 
-    const timer = window.setTimeout(() => {
-      if (state.secondsLeft <= 1) {
-        trackEvent("craving_timer_expired", {
-          trigger: state.selectedTrigger || null,
-          seconds_left: state.secondsLeft,
-        });
-        dispatch({ type: "END_CRAVING" });
-      } else {
-        dispatch({ type: "TICK_CRAVING" });
+    if (state.cravingTimerDone || state.cravingEndsAt === null) return;
+
+    const completeTimer = () => {
+      if (timerCompletedRef.current) return;
+      timerCompletedRef.current = true;
+      clearCravingTimerInWorker();
+      trackEvent("craving_timer_expired", {
+        trigger: state.selectedTrigger || null,
+        seconds_left: 0,
+      });
+      dispatch({ type: "TIMER_COMPLETE" });
+      void notifyCravingTimerComplete();
+    };
+
+    const tick = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((state.cravingEndsAt! - Date.now()) / 1000)
+      );
+
+      if (remaining <= 0) {
+        completeTimer();
+        return;
       }
-    }, 1000);
 
-    return () => window.clearTimeout(timer);
-  }, [state.cravingMode, state.secondsLeft, state.selectedTrigger]);
+      if (remaining !== state.secondsLeft) {
+        dispatch({ type: "SET_SECONDS_LEFT", value: remaining });
+      }
+    };
+
+    tick();
+    const interval = window.setInterval(tick, 1000);
+
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      tick();
+      tryFocusApp();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [
+    state.cravingMode,
+    state.cravingTimerDone,
+    state.cravingEndsAt,
+    state.secondsLeft,
+    state.selectedTrigger,
+  ]);
 
   const smokeFreeDays = getSmokeFreeDays(state.quitDate, referenceTime);
   const savedMoney = Math.round(
@@ -140,7 +190,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       savedMoney,
       topTriggers,
       startCraving: () => {
+        const endsAt = Date.now() + CRAVING_DURATION_SECONDS * 1000;
         dispatch({ type: "START_CRAVING" });
+        requestCravingNotifications();
+        scheduleCravingTimerInWorker(endsAt);
         trackEvent("craving_started");
       },
       selectTrigger: (name) => {
@@ -148,6 +201,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         trackEvent("trigger_selected", { trigger: name });
       },
       finishCraving: () => {
+        clearCravingTimerInWorker();
         dispatch({ type: "FINISH_CRAVING" });
         trackEvent("craving_finished", {
           trigger: state.selectedTrigger || null,
@@ -155,6 +209,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
       },
       relapse: () => {
+        clearCravingTimerInWorker();
         dispatch({ type: "RELAPSE" });
         trackEvent("craving_relapse", {
           trigger: state.selectedTrigger || null,
