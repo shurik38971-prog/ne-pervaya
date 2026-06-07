@@ -31,3 +31,42 @@ create policy "anon_select_events_mvp"
   for select
   to anon
   using (true);
+
+-- Отзывы тестировщиков (anonymous insert)
+create table if not exists public.feedback (
+  id bigint generated always as identity primary key,
+  user_id text not null,
+  smoking_years int,
+  cigarettes_per_day int,
+  app_opens text,
+  main_usage_moment text,
+  helped_not_smoke text,
+  helped_situation text,
+  liked_most text,
+  useless_or_extra text,
+  missing_feature text,
+  willingness_to_pay text,
+  retention_score int,
+  main_improvement text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists feedback_created_at_idx on public.feedback (created_at desc);
+create index if not exists feedback_user_id_idx on public.feedback (user_id);
+
+alter table public.feedback enable row level security;
+
+drop policy if exists "anon_insert_feedback" on public.feedback;
+create policy "anon_insert_feedback"
+  on public.feedback
+  for insert
+  to anon
+  with check (true);
+
+-- MVP: чтение для /admin через anon key.
+drop policy if exists "anon_select_feedback_mvp" on public.feedback;
+create policy "anon_select_feedback_mvp"
+  on public.feedback
+  for select
+  to anon
+  using (true);

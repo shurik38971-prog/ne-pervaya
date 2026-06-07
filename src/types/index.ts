@@ -58,6 +58,7 @@ export type AnalyticsEventName =
   | "craving_timer_expired"
   | "rewire_message_shown"
   | "helped_method_selected"
+  | "feedback_submitted"
   | "admin_opened"
   | "admin_data_reset";
 

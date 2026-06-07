@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import FeedbackLink from "@/components/FeedbackLink";
 import RewireMessageCard from "@/components/RewireMessageCard";
 import { useApp } from "@/context/AppProvider";
 import TodayMetrics from "@/components/TodayMetrics";
@@ -57,6 +58,10 @@ export default function TodayTab() {
           <RewireMessageCard message={thoughtOfDay} />
         </div>
       </section>
+
+      <div className="mt-8 pb-4">
+        <FeedbackLink />
+      </div>
     </div>
   );
 }

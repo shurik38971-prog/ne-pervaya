@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useReducer, useRef } from "react";
+import AdminFeedbackSection from "@/components/AdminFeedbackSection";
 import AdminFunnel from "@/components/AdminFunnel";
 import AdminMetricCard from "@/components/AdminMetricCard";
 import AdminRecentEvents from "@/components/AdminRecentEvents";
@@ -11,7 +12,9 @@ import { getAnonymousUserId, trackEvent } from "@/lib/analytics";
 import {
   computeAdminMetrics,
   fetchAdminEvents,
+  fetchAdminFeedback,
   type AdminMetrics,
+  type FeedbackEntry,
 } from "@/lib/admin-analytics";
 import { getSupabase } from "@/lib/supabase";
 
@@ -19,18 +22,27 @@ type AdminPageState = {
   status: "loading" | "error" | "empty" | "ready";
   errorMessage: string;
   metrics: AdminMetrics | null;
+  feedback: FeedbackEntry[];
+  feedbackError: string | null;
 };
 
 type AdminPageAction =
   | { type: "LOADING" }
   | { type: "ERROR"; message: string }
-  | { type: "EMPTY" }
-  | { type: "READY"; metrics: AdminMetrics };
+  | { type: "EMPTY"; feedback: FeedbackEntry[]; feedbackError: string | null }
+  | {
+      type: "READY";
+      metrics: AdminMetrics;
+      feedback: FeedbackEntry[];
+      feedbackError: string | null;
+    };
 
 const initialState: AdminPageState = {
   status: "loading",
   errorMessage: "",
   metrics: null,
+  feedback: [],
+  feedbackError: null,
 };
 
 function adminPageReducer(
@@ -39,22 +51,40 @@ function adminPageReducer(
 ): AdminPageState {
   switch (action.type) {
     case "LOADING":
-      return { ...state, status: "loading", errorMessage: "", metrics: null };
+      return {
+        ...state,
+        status: "loading",
+        errorMessage: "",
+        metrics: null,
+        feedback: [],
+        feedbackError: null,
+      };
     case "ERROR":
       return {
         ...state,
         status: "error",
         errorMessage: action.message,
         metrics: null,
+        feedback: [],
+        feedbackError: null,
       };
     case "EMPTY":
-      return { ...state, status: "empty", errorMessage: "", metrics: null };
+      return {
+        ...state,
+        status: "empty",
+        errorMessage: "",
+        metrics: null,
+        feedback: action.feedback,
+        feedbackError: action.feedbackError,
+      };
     case "READY":
       return {
         ...state,
         status: "ready",
         errorMessage: "",
         metrics: action.metrics,
+        feedback: action.feedback,
+        feedbackError: action.feedbackError,
       };
     default:
       return state;
@@ -85,9 +115,15 @@ export default function AdminDashboard() {
       }
 
       // Для production закрыть чтение events и делать admin через server-side + auth.
-      const { events, error } = await fetchAdminEvents(supabase);
+      const [eventsResult, feedbackResult] = await Promise.all([
+        fetchAdminEvents(supabase),
+        fetchAdminFeedback(supabase),
+      ]);
 
       if (cancelled) return;
+
+      const { events, error } = eventsResult;
+      const { feedback, error: feedbackError } = feedbackResult;
 
       if (error) {
         dispatch({
@@ -98,13 +134,19 @@ export default function AdminDashboard() {
       }
 
       if (!events || events.length === 0) {
-        dispatch({ type: "EMPTY" });
+        dispatch({
+          type: "EMPTY",
+          feedback: feedback ?? [],
+          feedbackError,
+        });
         return;
       }
 
       dispatch({
         type: "READY",
         metrics: computeAdminMetrics(events),
+        feedback: feedback ?? [],
+        feedbackError,
       });
     }
 
@@ -242,6 +284,13 @@ export default function AdminDashboard() {
               </div>
             </section>
           </>
+        )}
+
+        {(state.status === "empty" || state.status === "ready") && (
+          <AdminFeedbackSection
+            feedback={state.feedback}
+            error={state.feedbackError}
+          />
         )}
       </div>
     </main>

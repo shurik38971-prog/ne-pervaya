@@ -161,6 +161,43 @@ export async function fetchAdminEvents(supabase: SupabaseClient) {
   };
 }
 
+export type FeedbackEntry = {
+  id: number;
+  user_id: string;
+  smoking_years: number | null;
+  cigarettes_per_day: number | null;
+  app_opens: string | null;
+  main_usage_moment: string | null;
+  helped_not_smoke: string | null;
+  helped_situation: string | null;
+  liked_most: string | null;
+  useless_or_extra: string | null;
+  missing_feature: string | null;
+  willingness_to_pay: string | null;
+  retention_score: number | null;
+  main_improvement: string | null;
+  created_at: string;
+};
+
+export async function fetchAdminFeedback(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from("feedback")
+    .select(
+      "id, user_id, smoking_years, cigarettes_per_day, app_opens, main_usage_moment, helped_not_smoke, helped_situation, liked_most, useless_or_extra, missing_feature, willingness_to_pay, retention_score, main_improvement, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    return { feedback: null, error: error.message };
+  }
+
+  return {
+    feedback: (data ?? []) as FeedbackEntry[],
+    error: null,
+  };
+}
+
 export function formatEventTime(iso: string) {
   return new Date(iso).toLocaleString("ru-RU", {
     day: "2-digit",

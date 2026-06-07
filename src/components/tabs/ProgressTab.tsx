@@ -1,6 +1,7 @@
 "use client";
 
 import { useApp } from "@/context/AppProvider";
+import FeedbackLink from "@/components/FeedbackLink";
 import StatsPanel from "@/components/StatsPanel";
 import TopHelpedMethods from "@/components/TopHelpedMethods";
 import TopTriggers from "@/components/TopTriggers";
@@ -44,6 +45,8 @@ export default function ProgressTab() {
       <TopTriggers triggers={topTriggers} />
 
       <TopHelpedMethods methods={topHelpedMethods} />
+
+      <FeedbackLink />
     </div>
   );
 }
