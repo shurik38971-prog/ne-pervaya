@@ -11,7 +11,7 @@ export default function TodayTab() {
   const [thoughtOfDay] = useState(() => pickRewireMessage().message);
 
   return (
-    <div className="flex min-h-[calc(100dvh-6.5rem)] w-full min-w-0 flex-col">
+    <div className="w-full min-w-0">
       <header className="w-full min-w-0 pt-1">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
           Не первая

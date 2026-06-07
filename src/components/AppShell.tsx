@@ -20,7 +20,7 @@ export default function AppShell() {
 
   return (
     <>
-      <div className="mx-auto min-h-screen w-full max-w-md px-4 pb-24 pt-6 text-white">
+      <div className="mx-auto w-full max-w-md px-4 pb-24 pt-6 text-white">
         {activeTab === "today" && <TodayTab />}
         {activeTab === "progress" && <ProgressTab />}
         {activeTab === "help" && <HelpTab />}
@@ -30,8 +30,8 @@ export default function AppShell() {
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
 
       {state.cravingMode && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-zinc-950 px-4 py-6">
-          <div className="mx-auto flex min-h-full w-full max-w-md items-center">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-zinc-950 px-4 py-6 [-webkit-overflow-scrolling:touch]">
+          <div className="mx-auto w-full max-w-md py-2">
             <CravingMode
               secondsLeft={state.secondsLeft}
               timerDone={state.cravingTimerDone}

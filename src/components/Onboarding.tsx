@@ -24,7 +24,7 @@ export default function Onboarding({
   const canStart = quitDate.length > 0 && cigarettesPerDay > 0;
 
   return (
-    <main className="flex min-h-screen w-full items-center overflow-x-hidden bg-zinc-950 px-4 py-8 text-white sm:px-5">
+    <main className="min-h-dvh w-full overflow-x-hidden bg-zinc-950 px-4 py-8 text-white sm:px-5">
       <div className="mx-auto w-full max-w-md min-w-0">
         <section className="rounded-3xl bg-zinc-900 p-6 shadow-2xl shadow-black/40">
           <div className="mb-6 text-center">
