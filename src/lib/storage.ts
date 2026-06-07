@@ -1,4 +1,10 @@
-import { DEFAULT_TRIGGERS, STORAGE_KEYS, type Trigger } from "@/types";
+import {
+  DEFAULT_HELPED_METHODS,
+  DEFAULT_TRIGGERS,
+  STORAGE_KEYS,
+  type HelpedMethod,
+  type Trigger,
+} from "@/types";
 
 export type AppData = {
   quitDate: string;
@@ -9,6 +15,7 @@ export type AppData = {
   wins: number;
   relapses: number;
   triggers: Trigger[];
+  helpedMethods: HelpedMethod[];
 };
 
 export const DEFAULT_APP_DATA: AppData = {
@@ -20,6 +27,7 @@ export const DEFAULT_APP_DATA: AppData = {
   wins: 0,
   relapses: 0,
   triggers: DEFAULT_TRIGGERS,
+  helpedMethods: DEFAULT_HELPED_METHODS,
 };
 
 export function loadAppData(): AppData {
@@ -37,6 +45,7 @@ export function loadAppData(): AppData {
   const savedWins = localStorage.getItem(STORAGE_KEYS.wins);
   const savedRelapses = localStorage.getItem(STORAGE_KEYS.relapses);
   const savedTriggers = localStorage.getItem(STORAGE_KEYS.triggers);
+  const savedHelpedMethods = localStorage.getItem(STORAGE_KEYS.helpedMethods);
 
   let onboardingCompleted = savedOnboardingCompleted === "true";
   if (!onboardingCompleted && savedQuitDate) {
@@ -57,6 +66,9 @@ export function loadAppData(): AppData {
     wins: savedWins ? Number(savedWins) : 0,
     relapses: savedRelapses ? Number(savedRelapses) : 0,
     triggers: savedTriggers ? parseTriggers(savedTriggers) : DEFAULT_TRIGGERS,
+    helpedMethods: savedHelpedMethods
+      ? parseHelpedMethods(savedHelpedMethods)
+      : DEFAULT_HELPED_METHODS,
   };
 }
 
@@ -67,6 +79,16 @@ function parseTriggers(raw: string): Trigger[] {
     return parsed;
   } catch {
     return DEFAULT_TRIGGERS;
+  }
+}
+
+function parseHelpedMethods(raw: string): HelpedMethod[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_HELPED_METHODS;
+    return parsed;
+  } catch {
+    return DEFAULT_HELPED_METHODS;
   }
 }
 
@@ -97,4 +119,8 @@ export function saveAppData(data: AppData) {
   localStorage.setItem(STORAGE_KEYS.wins, String(data.wins));
   localStorage.setItem(STORAGE_KEYS.relapses, String(data.relapses));
   localStorage.setItem(STORAGE_KEYS.triggers, JSON.stringify(data.triggers));
+  localStorage.setItem(
+    STORAGE_KEYS.helpedMethods,
+    JSON.stringify(data.helpedMethods)
+  );
 }

@@ -3,6 +3,11 @@ export type Trigger = {
   count: number;
 };
 
+export type HelpedMethod = {
+  name: string;
+  count: number;
+};
+
 export const DEFAULT_TRIGGERS: Trigger[] = [
   { name: "Стресс", count: 0 },
   { name: "Кофе", count: 0 },
@@ -14,6 +19,18 @@ export const DEFAULT_TRIGGERS: Trigger[] = [
   { name: "Привычка", count: 0 },
 ];
 
+export const DEFAULT_HELPED_METHODS: HelpedMethod[] = [
+  { name: "Выпил воды", count: 0 },
+  { name: "Прогулялся", count: 0 },
+  { name: "Подышал", count: 0 },
+  { name: "Помогла карточка", count: 0 },
+  { name: "Отвлёкся на другое", count: 0 },
+  { name: "Просто переждал", count: 0 },
+  { name: "Другое", count: 0 },
+];
+
+export type CravingHelpStep = "none" | "pick_method" | "success";
+
 export const STORAGE_KEYS = {
   quitDate: "quitDate",
   cigarettesPerDay: "cigarettesPerDay",
@@ -23,6 +40,7 @@ export const STORAGE_KEYS = {
   wins: "wins",
   relapses: "relapses",
   triggers: "triggers",
+  helpedMethods: "helpedMethods",
 } as const;
 
 export const CRAVING_DURATION_SECONDS = 600;
@@ -39,6 +57,7 @@ export type AnalyticsEventName =
   | "craving_relapse"
   | "craving_timer_expired"
   | "rewire_message_shown"
+  | "helped_method_selected"
   | "admin_opened"
   | "admin_data_reset";
 

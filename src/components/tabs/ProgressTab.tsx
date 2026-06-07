@@ -2,10 +2,12 @@
 
 import { useApp } from "@/context/AppProvider";
 import StatsPanel from "@/components/StatsPanel";
+import TopHelpedMethods from "@/components/TopHelpedMethods";
 import TopTriggers from "@/components/TopTriggers";
 
 export default function ProgressTab() {
-  const { state, smokeFreeDays, savedMoney, topTriggers } = useApp();
+  const { state, smokeFreeDays, savedMoney, topTriggers, topHelpedMethods } =
+    useApp();
 
   const totalCravings = state.wins + state.relapses;
   const antiRelapseRate =
@@ -40,6 +42,8 @@ export default function ProgressTab() {
       </section>
 
       <TopTriggers triggers={topTriggers} />
+
+      <TopHelpedMethods methods={topHelpedMethods} />
     </div>
   );
 }

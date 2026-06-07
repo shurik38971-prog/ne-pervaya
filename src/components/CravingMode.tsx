@@ -2,27 +2,35 @@ import { useEffect, useRef, useState } from "react";
 import RewireMessageCard from "@/components/RewireMessageCard";
 import { trackEvent } from "@/lib/analytics";
 import { pickRewireMessage } from "@/lib/rewire-messages";
-import type { Trigger } from "@/types";
+import type { CravingHelpStep, HelpedMethod, Trigger } from "@/types";
 
 type CravingModeProps = {
   secondsLeft: number;
   timerDone: boolean;
+  cravingHelpStep: CravingHelpStep;
   personalReason: string;
   triggers: Trigger[];
+  helpedMethods: HelpedMethod[];
   selectedTrigger: string;
   onSelectTrigger: (name: string) => void;
-  onFinish: () => void;
+  onDeclareWin: () => void;
+  onSelectHelpedMethod: (method: string) => void;
+  onCompleteWin: () => void;
   onRelapse: () => void;
 };
 
 export default function CravingMode({
   secondsLeft,
   timerDone,
+  cravingHelpStep,
   personalReason,
   triggers,
+  helpedMethods,
   selectedTrigger,
   onSelectTrigger,
-  onFinish,
+  onDeclareWin,
+  onSelectHelpedMethod,
+  onCompleteWin,
   onRelapse,
 }: CravingModeProps) {
   const [rewirePick] = useState(() => pickRewireMessage());
@@ -42,6 +50,54 @@ export default function CravingMode({
       rewireTrackedRef.current = true;
     }
   }, [rewirePick.index, selectedTrigger]);
+
+  useEffect(() => {
+    if (cravingHelpStep !== "success") return;
+
+    const timeout = window.setTimeout(() => {
+      onCompleteWin();
+    }, 2800);
+
+    return () => window.clearTimeout(timeout);
+  }, [cravingHelpStep, onCompleteWin]);
+
+  if (cravingHelpStep === "pick_method") {
+    return (
+      <section className="w-full min-w-0 rounded-3xl bg-emerald-600 p-4 text-center sm:p-5">
+        <p className="text-sm font-medium uppercase tracking-widest text-emerald-100/90">
+          Победа
+        </p>
+        <h2 className="mt-4 text-2xl font-extrabold leading-tight sm:text-3xl">
+          Что помогло тебе справиться?
+        </h2>
+
+        <div className="mt-6 grid grid-cols-1 gap-2">
+          {helpedMethods.map((method) => (
+            <button
+              key={method.name}
+              type="button"
+              onClick={() => onSelectHelpedMethod(method.name)}
+              className="min-h-12 rounded-2xl bg-emerald-700 px-4 py-3 text-left text-sm font-bold text-white transition-colors active:scale-95 active:bg-emerald-800"
+            >
+              {method.name}
+            </button>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (cravingHelpStep === "success") {
+    return (
+      <section className="w-full min-w-0 rounded-3xl bg-emerald-600 p-6 text-center sm:p-8">
+        <p className="text-4xl">✓</p>
+        <h2 className="mt-4 text-2xl font-extrabold sm:text-3xl">Отлично.</h2>
+        <p className="mt-4 text-lg font-medium leading-relaxed text-emerald-50">
+          Ты пережил ещё одну волну тяги.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="w-full min-w-0 rounded-3xl bg-red-500 p-4 text-center sm:p-5">
@@ -125,7 +181,7 @@ export default function CravingMode({
 
           <button
             type="button"
-            onClick={onFinish}
+            onClick={onDeclareWin}
             className="mt-8 min-h-14 w-full rounded-2xl bg-white py-4 text-lg font-bold text-red-500 active:scale-95"
           >
             Я справился

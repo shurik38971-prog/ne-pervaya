@@ -1,5 +1,10 @@
 import { DEFAULT_APP_DATA, type AppData } from "@/lib/storage";
-import { CRAVING_DURATION_SECONDS, type Trigger } from "@/types";
+import {
+  CRAVING_DURATION_SECONDS,
+  type CravingHelpStep,
+  type HelpedMethod,
+  type Trigger,
+} from "@/types";
 
 export function todayISO() {
   return new Date().toISOString().split("T")[0];
@@ -9,6 +14,7 @@ export type UIState = {
   hydrated: boolean;
   cravingMode: boolean;
   cravingTimerDone: boolean;
+  cravingHelpStep: CravingHelpStep;
   cravingEndsAt: number | null;
   secondsLeft: number;
   selectedTrigger: string;
@@ -27,7 +33,9 @@ export type AppAction =
   | { type: "SET_SECONDS_LEFT"; value: number }
   | { type: "TIMER_COMPLETE" }
   | { type: "SELECT_TRIGGER"; name: string }
-  | { type: "FINISH_CRAVING" }
+  | { type: "DECLARE_CRAVING_WIN" }
+  | { type: "SELECT_HELPED_METHOD"; name: string }
+  | { type: "CLOSE_CRAVING" }
   | { type: "RELAPSE" };
 
 export const initialAppState: AppState = {
@@ -35,6 +43,7 @@ export const initialAppState: AppState = {
   hydrated: false,
   cravingMode: false,
   cravingTimerDone: false,
+  cravingHelpStep: "none",
   cravingEndsAt: null,
   secondsLeft: CRAVING_DURATION_SECONDS,
   selectedTrigger: "",
@@ -63,6 +72,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         cravingMode: true,
         cravingTimerDone: false,
+        cravingHelpStep: "none",
         cravingEndsAt: Date.now() + CRAVING_DURATION_SECONDS * 1000,
         secondsLeft: CRAVING_DURATION_SECONDS,
         selectedTrigger: "",
@@ -80,15 +90,27 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         selectedTrigger: action.name,
       };
-    case "FINISH_CRAVING":
+    case "DECLARE_CRAVING_WIN":
       return {
         ...state,
         wins: state.wins + 1,
+        cravingHelpStep: "pick_method",
+        triggers: incrementTriggerIfSelected(state.triggers, state.selectedTrigger),
+      };
+    case "SELECT_HELPED_METHOD":
+      return {
+        ...state,
+        cravingHelpStep: "success",
+        helpedMethods: incrementHelpedMethod(state.helpedMethods, action.name),
+      };
+    case "CLOSE_CRAVING":
+      return {
+        ...state,
         cravingMode: false,
         cravingTimerDone: false,
+        cravingHelpStep: "none",
         cravingEndsAt: null,
         secondsLeft: CRAVING_DURATION_SECONDS,
-        triggers: incrementTriggerIfSelected(state.triggers, state.selectedTrigger),
         selectedTrigger: "",
       };
     case "RELAPSE":
@@ -97,6 +119,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         relapses: state.relapses + 1,
         cravingMode: false,
         cravingTimerDone: false,
+        cravingHelpStep: "none",
         cravingEndsAt: null,
         secondsLeft: CRAVING_DURATION_SECONDS,
         triggers: incrementTriggerIfSelected(state.triggers, state.selectedTrigger),
@@ -117,6 +140,12 @@ function incrementTriggerIfSelected(triggers: Trigger[], name: string) {
   );
 }
 
+function incrementHelpedMethod(methods: HelpedMethod[], name: string) {
+  return methods.map((method) =>
+    method.name === name ? { ...method, count: method.count + 1 } : method
+  );
+}
+
 export function getSmokeFreeDays(quitDate: string, referenceTime: number) {
   if (!quitDate) return 0;
 
@@ -133,4 +162,11 @@ export function getTopTriggers(triggers: Trigger[]) {
     .filter((trigger) => trigger.count > 0)
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
+}
+
+export function getTopHelpedMethods(methods: HelpedMethod[]) {
+  return [...methods]
+    .filter((method) => method.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 }

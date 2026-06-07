@@ -14,6 +14,7 @@ import { getAnonymousUserId, trackEvent } from "@/lib/analytics";
 import {
   appReducer,
   getSmokeFreeDays,
+  getTopHelpedMethods,
   getTopTriggers,
   initialAppState,
   type AppAction,
@@ -36,9 +37,12 @@ type AppContextValue = {
   smokeFreeDays: number;
   savedMoney: number;
   topTriggers: ReturnType<typeof getTopTriggers>;
+  topHelpedMethods: ReturnType<typeof getTopHelpedMethods>;
   startCraving: () => void;
   selectTrigger: (name: string) => void;
-  finishCraving: () => void;
+  declareCravingWin: () => void;
+  selectHelpedMethod: (method: string) => void;
+  completeCravingWin: () => void;
   relapse: () => void;
   completeOnboarding: () => void;
 };
@@ -119,6 +123,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       wins: state.wins,
       relapses: state.relapses,
       triggers: state.triggers,
+      helpedMethods: state.helpedMethods,
     });
   }, [
     state.hydrated,
@@ -130,6 +135,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     state.wins,
     state.relapses,
     state.triggers,
+    state.helpedMethods,
   ]);
 
   useEffect(() => {
@@ -199,6 +205,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => getTopTriggers(state.triggers),
     [state.triggers]
   );
+  const topHelpedMethods = useMemo(
+    () => getTopHelpedMethods(state.helpedMethods),
+    [state.helpedMethods]
+  );
 
   const value = useMemo<AppContextValue>(
     () => ({
@@ -207,6 +217,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       smokeFreeDays,
       savedMoney,
       topTriggers,
+      topHelpedMethods,
       startCraving: () => {
         const endsAt = Date.now() + CRAVING_DURATION_SECONDS * 1000;
         dispatch({ type: "START_CRAVING" });
@@ -218,13 +229,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "SELECT_TRIGGER", name });
         trackEvent("trigger_selected", { trigger: name });
       },
-      finishCraving: () => {
+      declareCravingWin: () => {
         clearCravingTimerInWorker();
-        dispatch({ type: "FINISH_CRAVING" });
+        dispatch({ type: "DECLARE_CRAVING_WIN" });
         trackEvent("craving_finished", {
           trigger: state.selectedTrigger || null,
           wins: state.wins + 1,
         });
+      },
+      selectHelpedMethod: (method) => {
+        dispatch({ type: "SELECT_HELPED_METHOD", name: method });
+        trackEvent("helped_method_selected", {
+          method,
+          selectedTrigger: state.selectedTrigger || null,
+        });
+      },
+      completeCravingWin: () => {
+        dispatch({ type: "CLOSE_CRAVING" });
       },
       relapse: () => {
         clearCravingTimerInWorker();
@@ -249,6 +270,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       smokeFreeDays,
       savedMoney,
       topTriggers,
+      topHelpedMethods,
     ]
   );
 

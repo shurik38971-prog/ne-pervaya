@@ -14,7 +14,9 @@ export default function AppShell() {
   const {
     state,
     selectTrigger,
-    finishCraving,
+    declareCravingWin,
+    selectHelpedMethod,
+    completeCravingWin,
     relapse,
   } = useApp();
 
@@ -35,11 +37,15 @@ export default function AppShell() {
             <CravingMode
               secondsLeft={state.secondsLeft}
               timerDone={state.cravingTimerDone}
+              cravingHelpStep={state.cravingHelpStep}
               personalReason={state.personalReason}
               triggers={state.triggers}
+              helpedMethods={state.helpedMethods}
               selectedTrigger={state.selectedTrigger}
               onSelectTrigger={selectTrigger}
-              onFinish={finishCraving}
+              onDeclareWin={declareCravingWin}
+              onSelectHelpedMethod={selectHelpedMethod}
+              onCompleteWin={completeCravingWin}
               onRelapse={relapse}
             />
           </div>
