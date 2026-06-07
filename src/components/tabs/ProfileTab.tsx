@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useApp } from "@/context/AppProvider";
 import PersonalReason from "@/components/PersonalReason";
 import StartSettings from "@/components/StartSettings";
@@ -33,13 +32,6 @@ export default function ProfileTab() {
           dispatch({ type: "SET_PACK_PRICE", value })
         }
       />
-
-      <Link
-        href="/admin"
-        className="flex min-h-14 items-center justify-center rounded-3xl border border-zinc-700 bg-zinc-900 text-base font-semibold text-zinc-200 transition-transform active:scale-95"
-      >
-        Аналитика MVP
-      </Link>
     </div>
   );
 }
