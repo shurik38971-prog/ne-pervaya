@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RewireMessageCard from "@/components/RewireMessageCard";
 import { trackEvent } from "@/lib/analytics";
 import { pickRewireMessage } from "@/lib/rewire-messages";
@@ -26,15 +26,22 @@ export default function CravingMode({
   onRelapse,
 }: CravingModeProps) {
   const [rewirePick] = useState(() => pickRewireMessage());
+  const rewireTrackedRef = useRef(false);
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
 
   useEffect(() => {
+    if (rewireTrackedRef.current) return;
+
     trackEvent("rewire_message_shown", {
       messageIndex: rewirePick.index,
-      triggerName: null,
+      triggerName: selectedTrigger || null,
     });
-  }, [rewirePick.index]);
+
+    if (selectedTrigger) {
+      rewireTrackedRef.current = true;
+    }
+  }, [rewirePick.index, selectedTrigger]);
 
   return (
     <section className="w-full min-w-0 rounded-3xl bg-red-500 p-4 text-center sm:p-5">
@@ -113,6 +120,8 @@ export default function CravingMode({
               Триггер: {selectedTrigger}
             </p>
           )}
+
+          <RewireMessageCard message={rewirePick.message} variant="craving" />
 
           <button
             type="button"
