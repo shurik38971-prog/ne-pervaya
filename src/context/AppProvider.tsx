@@ -21,9 +21,15 @@ import {
   type AppState,
 } from "@/lib/app-reducer";
 import {
-  clearCravingTimerInWorker,
+  clearCravingBackgrounded,
+  markCravingBackgrounded,
   notifyCravingTimerComplete,
   requestCravingNotifications,
+  setupNativeNotificationListeners,
+} from "@/lib/craving-notifications";
+import {
+  clearCravingTimerInWorker,
+  registerCravingBackgroundChecks,
   resyncCravingTimerInWorker,
   scheduleCravingTimerInWorker,
   tryFocusApp,
@@ -140,8 +146,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ]);
 
   useEffect(() => {
+    return setupNativeNotificationListeners();
+  }, []);
+
+  useEffect(() => {
     if (!state.cravingMode) {
       timerCompletedRef.current = false;
+      clearCravingBackgrounded();
       return;
     }
 
@@ -150,13 +161,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const completeTimer = () => {
       if (timerCompletedRef.current) return;
       timerCompletedRef.current = true;
-      void clearCravingTimerInWorker();
+      const endsAt = state.cravingEndsAt;
       trackEvent("craving_timer_expired", {
         trigger: state.selectedTrigger || null,
         seconds_left: 0,
       });
       dispatch({ type: "TIMER_COMPLETE" });
-      void notifyCravingTimerComplete();
+      void (async () => {
+        await notifyCravingTimerComplete(endsAt);
+        await clearCravingTimerInWorker();
+      })();
     };
 
     const tick = () => {
@@ -185,15 +199,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      if (state.cravingEndsAt) {
-        void resyncCravingTimerInWorker(state.cravingEndsAt);
-      }
+      if (!state.cravingEndsAt) return;
+
+      markCravingBackgrounded();
+      void resyncCravingTimerInWorker(state.cravingEndsAt);
+      void registerCravingBackgroundChecks();
     };
 
     const onPageHide = () => {
-      if (state.cravingEndsAt) {
-        void resyncCravingTimerInWorker(state.cravingEndsAt);
-      }
+      if (!state.cravingEndsAt) return;
+      markCravingBackgrounded();
+      void resyncCravingTimerInWorker(state.cravingEndsAt);
+      void registerCravingBackgroundChecks();
     };
 
     document.addEventListener("visibilitychange", onVisibility);
@@ -236,6 +253,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       startCraving: () => {
         const endsAt = Date.now() + CRAVING_DURATION_SECONDS * 1000;
         dispatch({ type: "START_CRAVING" });
+        clearCravingBackgrounded();
         void (async () => {
           await requestCravingNotifications();
           await scheduleCravingTimerInWorker(endsAt);

@@ -1,9 +1,10 @@
-const CACHE_NAME = "ne-pervaya-v4";
+const CACHE_NAME = "ne-pervaya-v5";
 const DB_NAME = "ne-pervaya";
 const DB_VERSION = 1;
 const TIMER_STORE = "timers";
 const CRAVING_ENDS_AT_KEY = "cravingEndsAt";
 const CRAVING_TICK_MS = 15000;
+const SYNC_TAG = "craving-timer-check";
 
 let cravingTimerId = null;
 let cravingTimerGeneration = 0;
@@ -18,16 +19,19 @@ const PRECACHE_URLS = [
   "/offline.html",
 ];
 
-const NOTIFICATION_OPTIONS = {
-  body: "10 минут прошли. Открой приложение и отметь результат.",
-  icon: "/icons/icon-192.png",
-  badge: "/icons/icon-192.png",
-  tag: "craving-timer-complete",
-  renotify: true,
-  requireInteraction: true,
-  vibrate: [120, 80, 120],
-  data: { url: "/" },
-};
+function getNotificationOptions() {
+  const origin = self.location.origin;
+  return {
+    body: "10 минут прошли. Открой приложение и отметь результат.",
+    icon: `${origin}/icons/icon-192.png`,
+    badge: `${origin}/icons/icon-192.png`,
+    tag: "craving-timer-complete",
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [120, 80, 120],
+    data: { url: "/" },
+  };
+}
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -81,7 +85,10 @@ async function clearCravingEndsAt() {
 
 async function showCravingCompleteNotification() {
   try {
-    await self.registration.showNotification("Не первая", NOTIFICATION_OPTIONS);
+    await self.registration.showNotification(
+      "Не первая",
+      getNotificationOptions()
+    );
   } catch (error) {
     console.warn("[sw] showNotification failed:", error);
   }
@@ -117,6 +124,29 @@ async function checkCravingTimerExpired() {
   }
 
   return false;
+}
+
+async function registerNextBackgroundSync() {
+  if (!self.registration.sync) return;
+
+  try {
+    await self.registration.sync.register(SYNC_TAG);
+  } catch (error) {
+    console.warn("[sw] background sync register failed:", error);
+  }
+}
+
+async function handleBackgroundSyncCheck() {
+  if (await checkCravingTimerExpired()) return;
+
+  const endsAt = await getCravingEndsAt();
+  if (!endsAt) return;
+
+  if (!cravingTimerResolve) {
+    await runCravingTimerUntilDone(endsAt);
+  }
+
+  await registerNextBackgroundSync();
 }
 
 function runCravingTimerUntilDone(endsAt) {
@@ -168,6 +198,7 @@ async function startCravingTimer(endsAt) {
   if (typeof endsAt !== "number" || endsAt <= Date.now()) return;
 
   await saveCravingEndsAt(endsAt);
+  await registerNextBackgroundSync();
   return runCravingTimerUntilDone(endsAt);
 }
 
@@ -186,6 +217,7 @@ async function resumeCravingTimerIfNeeded() {
     return;
   }
 
+  await registerNextBackgroundSync();
   return runCravingTimerUntilDone(endsAt);
 }
 
@@ -214,6 +246,11 @@ self.addEventListener("activate", (event) => {
       resumeCravingTimerIfNeeded(),
     ])
   );
+});
+
+self.addEventListener("sync", (event) => {
+  if (event.tag !== SYNC_TAG) return;
+  event.waitUntil(handleBackgroundSyncCheck());
 });
 
 self.addEventListener("message", (event) => {
@@ -245,6 +282,12 @@ self.addEventListener("message", (event) => {
   if (data.type === "CRAVING_TIMER_CLEAR") {
     ack();
     run(stopCravingTimer());
+    return;
+  }
+
+  if (data.type === "CRAVING_REGISTER_SYNC") {
+    ack();
+    run(registerNextBackgroundSync());
   }
 });
 
