@@ -4,45 +4,51 @@ import { useEffect, useReducer } from "react";
 import AdminDashboard from "@/components/AdminDashboard";
 import AdminForbidden from "@/components/AdminForbidden";
 import { useIsClient } from "@/hooks/useIsClient";
-import { getAdminKeyFromUrl, isAdminKeyValid } from "@/lib/admin-auth";
+import {
+  checkAdminAccess,
+  type AdminAccessResult,
+} from "@/lib/admin-auth";
 
-type AccessState = "checking" | "forbidden" | "authorized";
+type AccessState =
+  | { status: "checking" }
+  | { status: "forbidden"; reason: Exclude<AdminAccessResult, { ok: true }>["reason"] }
+  | { status: "authorized" };
 
 type AccessAction =
   | { type: "CHECK" }
-  | { type: "FORBIDDEN" }
-  | { type: "AUTHORIZED" };
+  | {
+      type: "RESULT";
+      result: AdminAccessResult;
+    };
 
 function accessReducer(_state: AccessState, action: AccessAction): AccessState {
-  switch (action.type) {
-    case "FORBIDDEN":
-      return "forbidden";
-    case "AUTHORIZED":
-      return "authorized";
-    default:
-      return "checking";
+  if (action.type === "CHECK") {
+    return { status: "checking" };
   }
+
+  if (action.result.ok) {
+    return { status: "authorized" };
+  }
+
+  return { status: "forbidden", reason: action.result.reason };
 }
 
 export default function AdminPage() {
   const isClient = useIsClient();
-  const [access, dispatch] = useReducer(accessReducer, "checking");
+  const [access, dispatch] = useReducer(accessReducer, { status: "checking" });
 
   useEffect(() => {
     if (!isClient) return;
 
-    const key = getAdminKeyFromUrl();
-    dispatch({
-      type: isAdminKeyValid(key) ? "AUTHORIZED" : "FORBIDDEN",
-    });
+    dispatch({ type: "RESULT", result: checkAdminAccess() });
   }, [isClient]);
 
-  if (!isClient || access === "checking") {
+  if (!isClient || access.status === "checking") {
     return <main className="min-h-screen bg-zinc-950" />;
   }
 
-  if (access === "forbidden") {
-    return <AdminForbidden />;
+  if (access.status === "forbidden") {
+    return <AdminForbidden reason={access.reason} />;
   }
 
   return <AdminDashboard />;
