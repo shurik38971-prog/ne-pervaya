@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
+import RewireMessageCard from "@/components/RewireMessageCard";
 import { useApp } from "@/context/AppProvider";
 import TodayMetrics from "@/components/TodayMetrics";
+import { pickRewireMessage } from "@/lib/rewire-messages";
 
 export default function TodayTab() {
   const { state, smokeFreeDays, startCraving } = useApp();
+  const [thoughtOfDay] = useState(() => pickRewireMessage().message);
 
   return (
     <div className="flex min-h-[calc(100dvh-6.5rem)] w-full min-w-0 flex-col">
@@ -35,7 +39,7 @@ export default function TodayTab() {
         />
       </div>
 
-      <div className="flex flex-1 items-end pb-2 pt-8">
+      <div className="pt-8">
         <button
           type="button"
           onClick={startCraving}
@@ -44,6 +48,15 @@ export default function TodayTab() {
           Меня тянет курить
         </button>
       </div>
+
+      <section className="mt-8 pb-2">
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-500">
+          Мысль дня
+        </h2>
+        <div className="mt-3">
+          <RewireMessageCard message={thoughtOfDay} />
+        </div>
+      </section>
     </div>
   );
 }

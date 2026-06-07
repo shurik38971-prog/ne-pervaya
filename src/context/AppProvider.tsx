@@ -48,7 +48,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const isClient = useIsClient();
   const [state, dispatch] = useReducer(appReducer, initialAppState);
-  const [referenceTime] = useState(() => Date.now());
+  const [, setDayTick] = useState(0);
   const appOpenedTracked = useRef(false);
   const settingsBaselineSet = useRef(false);
   const timerCompletedRef = useRef(false);
@@ -56,6 +56,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isClient) return;
     dispatch({ type: "HYDRATE", payload: loadAppData() });
+  }, [isClient]);
+
+  useEffect(() => {
+    if (!isClient) return;
+
+    const tick = () => setDayTick((value) => value + 1);
+    const interval = window.setInterval(tick, 60_000);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [isClient]);
 
   useEffect(() => {
@@ -173,7 +191,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     state.selectedTrigger,
   ]);
 
-  const smokeFreeDays = getSmokeFreeDays(state.quitDate, referenceTime);
+  const smokeFreeDays = getSmokeFreeDays(state.quitDate, Date.now());
   const savedMoney = Math.round(
     smokeFreeDays * state.cigarettesPerDay * (state.packPrice / 20)
   );

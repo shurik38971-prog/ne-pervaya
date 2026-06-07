@@ -31,7 +31,28 @@ export const REWIRE_MESSAGES = [
   "Ты уже выдержал до этого момента. Выдержи ещё немного.",
   "Первая сигарета — это дверь, которую ты сам закрыл. Не открывай снова.",
   "10 минут дискомфорта легче пережить, чем дни сожаления.",
+  "Зависимость любит первую сигарету больше всех остальных.",
+  "Ты не отказываешься от удовольствия. Ты отказываешься от ловушки.",
+  "Сигарета не друг. Она просто знает, как вернуть тебя.",
+  "Сейчас тяжело — потому что ты выходишь. Это знак прогресса.",
+  "Каждый раз, когда не закуриваешь, мозг учится жить без никотина.",
+  "Ты не обязан чувствовать себя сильным. Достаточно не сделать шаг назад.",
+  "Первая сигарета — это не награда. Это плата за зависимость.",
+  "Ты уже доказал, что можешь. Продолжай доказывать.",
+  "Никотин обещает покой, но забирает свободу.",
+  "Сейчас лучше потерпеть, чем потом начинать сначала.",
+  "Ты выбираешь себя, а не сигарету.",
+  "Тяга громкая, но временная. Решение — твоё.",
+  "Не корми зависимость. Она всегда просит ещё.",
+  "Одна минута терпения сильнее одной сигареты.",
+  "Ты не теряешь привычку. Ты возвращаешь здоровье.",
+  "Срыв не случается сам. Он начинается с «одной».",
 ] as const;
+
+export type RewirePick = {
+  message: string;
+  index: number;
+};
 
 const LAST_REWIRE_INDEX_KEY = "last_rewire_message_index";
 
@@ -62,10 +83,12 @@ function pickRandomIndex(excludeIndex: number) {
   return index;
 }
 
-export function pickRewireMessage(): string {
-  const index = pickRandomIndex(getLastIndex());
+export function pickRewireMessage(lastIndex?: number): RewirePick {
+  const excludeIndex =
+    lastIndex !== undefined ? lastIndex : getLastIndex();
+  const index = pickRandomIndex(excludeIndex);
   saveLastIndex(index);
-  return REWIRE_MESSAGES[index];
+  return { message: REWIRE_MESSAGES[index], index };
 }
 
 export function pickRewireMessages(count: number): string[] {

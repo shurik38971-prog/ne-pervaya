@@ -16,7 +16,12 @@ export default function ProfileTab() {
         </p>
       </header>
 
-      <PersonalReason reason={state.personalReason} />
+      <PersonalReason
+        reason={state.personalReason}
+        onReasonChange={(value) =>
+          dispatch({ type: "SET_PERSONAL_REASON", value })
+        }
+      />
 
       <StartSettings
         quitDate={state.quitDate}

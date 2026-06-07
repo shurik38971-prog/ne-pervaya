@@ -56,8 +56,18 @@ export function loadAppData(): AppData {
     onboardingCompleted,
     wins: savedWins ? Number(savedWins) : 0,
     relapses: savedRelapses ? Number(savedRelapses) : 0,
-    triggers: savedTriggers ? JSON.parse(savedTriggers) : DEFAULT_TRIGGERS,
+    triggers: savedTriggers ? parseTriggers(savedTriggers) : DEFAULT_TRIGGERS,
   };
+}
+
+function parseTriggers(raw: string): Trigger[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return DEFAULT_TRIGGERS;
+    return parsed;
+  } catch {
+    return DEFAULT_TRIGGERS;
+  }
 }
 
 export function clearAppData() {

@@ -83,7 +83,7 @@ export default function Onboarding({
 
             <label className="block">
               <span className="text-sm text-zinc-400">
-                Почему я хочу не курить?
+                Почему я решил не курить?
               </span>
               <textarea
                 value={personalReason}

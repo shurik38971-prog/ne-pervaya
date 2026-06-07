@@ -79,11 +79,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         selectedTrigger: action.name,
-        triggers: state.triggers.map((trigger) =>
-          trigger.name === action.name
-            ? { ...trigger, count: trigger.count + 1 }
-            : trigger
-        ),
       };
     case "FINISH_CRAVING":
       return {
@@ -93,6 +88,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         cravingTimerDone: false,
         cravingEndsAt: null,
         secondsLeft: CRAVING_DURATION_SECONDS,
+        triggers: incrementTriggerIfSelected(state.triggers, state.selectedTrigger),
         selectedTrigger: "",
       };
     case "RELAPSE":
@@ -103,11 +99,22 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         cravingTimerDone: false,
         cravingEndsAt: null,
         secondsLeft: CRAVING_DURATION_SECONDS,
+        triggers: incrementTriggerIfSelected(state.triggers, state.selectedTrigger),
         selectedTrigger: "",
       };
     default:
       return state;
   }
+}
+
+function incrementTriggerIfSelected(triggers: Trigger[], name: string) {
+  if (!name) return triggers;
+
+  return triggers.map((trigger) =>
+    trigger.name === name
+      ? { ...trigger, count: trigger.count + 1 }
+      : trigger
+  );
 }
 
 export function getSmokeFreeDays(quitDate: string, referenceTime: number) {

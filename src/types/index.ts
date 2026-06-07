@@ -38,6 +38,7 @@ export type AnalyticsEventName =
   | "craving_finished"
   | "craving_relapse"
   | "craving_timer_expired"
+  | "rewire_message_shown"
   | "admin_opened"
   | "admin_data_reset";
 
