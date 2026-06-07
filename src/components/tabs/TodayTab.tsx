@@ -8,17 +8,19 @@ export default function TodayTab() {
 
   return (
     <div className="flex min-h-[calc(100dvh-6.5rem)] flex-col">
-      <header>
+      <header className="pt-1">
         <p className="text-sm font-medium uppercase tracking-widest text-red-500">
           Не первая
         </p>
-        <h1 className="mt-2 text-2xl font-bold">Сегодня</h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          Не закури первую сигарету — только этот день
+        <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+          Сегодня я не курю.
+        </h1>
+        <p className="mt-4 text-base leading-relaxed text-zinc-400 sm:text-lg">
+          Срыв начинается с первой сигареты.
         </p>
       </header>
 
-      <div className="mt-5">
+      <div className="mt-10">
         <TodayMetrics
           smokeFreeDays={smokeFreeDays}
           wins={state.wins}
