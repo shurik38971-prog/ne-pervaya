@@ -1,10 +1,13 @@
-const CACHE_NAME = "ne-pervaya-v3";
+const CACHE_NAME = "ne-pervaya-v4";
 const DB_NAME = "ne-pervaya";
 const DB_VERSION = 1;
 const TIMER_STORE = "timers";
 const CRAVING_ENDS_AT_KEY = "cravingEndsAt";
+const CRAVING_TICK_MS = 15000;
 
 let cravingTimerId = null;
+let cravingTimerGeneration = 0;
+let cravingTimerResolve = null;
 
 const PRECACHE_URLS = [
   "/",
@@ -20,7 +23,9 @@ const NOTIFICATION_OPTIONS = {
   icon: "/icons/icon-192.png",
   badge: "/icons/icon-192.png",
   tag: "craving-timer-complete",
+  renotify: true,
   requireInteraction: true,
+  vibrate: [120, 80, 120],
   data: { url: "/" },
 };
 
@@ -87,46 +92,87 @@ function clearCravingTimer() {
   cravingTimerId = null;
 }
 
-function scheduleCravingNotification(endsAt) {
+function finishCravingTimerWait() {
+  if (cravingTimerResolve) {
+    cravingTimerResolve();
+    cravingTimerResolve = null;
+  }
+}
+
+function abortCravingTimerWait() {
+  cravingTimerGeneration += 1;
   clearCravingTimer();
+  finishCravingTimerWait();
+}
 
-  const tick = async () => {
-    let target = endsAt;
+async function checkCravingTimerExpired() {
+  const endsAt = await getCravingEndsAt();
+  if (!endsAt) return false;
 
-    try {
-      const stored = await getCravingEndsAt();
-      if (typeof stored === "number") {
-        target = stored;
+  if (endsAt <= Date.now()) {
+    abortCravingTimerWait();
+    await showCravingCompleteNotification();
+    await clearCravingEndsAt();
+    return true;
+  }
+
+  return false;
+}
+
+function runCravingTimerUntilDone(endsAt) {
+  abortCravingTimerWait();
+
+  const generation = cravingTimerGeneration;
+
+  return new Promise((resolve) => {
+    cravingTimerResolve = resolve;
+
+    const tick = async () => {
+      if (generation !== cravingTimerGeneration) return;
+
+      let target = endsAt;
+
+      try {
+        const stored = await getCravingEndsAt();
+        if (stored === null) {
+          abortCravingTimerWait();
+          return;
+        }
+        if (typeof stored === "number") {
+          target = stored;
+        }
+      } catch (error) {
+        console.warn("[sw] failed to read craving timer:", error);
       }
-    } catch (error) {
-      console.warn("[sw] failed to read craving timer:", error);
-    }
 
-    const remaining = target - Date.now();
+      if (generation !== cravingTimerGeneration) return;
 
-    if (remaining <= 0) {
-      clearCravingTimer();
-      await showCravingCompleteNotification();
-      await clearCravingEndsAt();
-      return;
-    }
+      const remaining = target - Date.now();
 
-    const nextDelay = Math.min(remaining, 15000);
-    cravingTimerId = setTimeout(tick, nextDelay);
-  };
+      if (remaining <= 0) {
+        clearCravingTimer();
+        await showCravingCompleteNotification();
+        await clearCravingEndsAt();
+        finishCravingTimerWait();
+        return;
+      }
 
-  void tick();
+      cravingTimerId = setTimeout(tick, Math.min(remaining, CRAVING_TICK_MS));
+    };
+
+    void tick();
+  });
 }
 
 async function startCravingTimer(endsAt) {
   if (typeof endsAt !== "number" || endsAt <= Date.now()) return;
 
   await saveCravingEndsAt(endsAt);
-  scheduleCravingNotification(endsAt);
+  return runCravingTimerUntilDone(endsAt);
 }
 
 async function stopCravingTimer() {
-  clearCravingTimer();
+  abortCravingTimerWait();
   await clearCravingEndsAt();
 }
 
@@ -140,7 +186,7 @@ async function resumeCravingTimerIfNeeded() {
     return;
   }
 
-  scheduleCravingNotification(endsAt);
+  return runCravingTimerUntilDone(endsAt);
 }
 
 self.addEventListener("install", (event) => {
@@ -174,20 +220,30 @@ self.addEventListener("message", (event) => {
   const data = event.data;
   if (!data || typeof data !== "object") return;
 
+  const ackPort = data._ackPort;
+  const ack = () => {
+    if (ackPort && "postMessage" in ackPort) {
+      ackPort.postMessage({ ok: true });
+    }
+  };
+
   const run = (promise) => {
     if ("waitUntil" in event && typeof event.waitUntil === "function") {
       event.waitUntil(promise);
       return;
     }
+
     void promise;
   };
 
   if (data.type === "CRAVING_TIMER_START") {
+    ack();
     run(startCravingTimer(data.endsAt));
     return;
   }
 
   if (data.type === "CRAVING_TIMER_CLEAR") {
+    ack();
     run(stopCravingTimer());
   }
 });
@@ -221,6 +277,14 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  event.waitUntil(
+    (async () => {
+      if (await checkCravingTimerExpired()) return;
+      if (cravingTimerResolve) return;
+      await resumeCravingTimerIfNeeded();
+    })()
+  );
 
   event.respondWith(
     caches.match(event.request).then((cached) => {

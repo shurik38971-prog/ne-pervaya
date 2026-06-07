@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import {
+  readPersistedCravingEndsAt,
+  resyncCravingTimerInWorker,
+} from "@/lib/craving-timer";
 
 export default function PwaRegister() {
   useEffect(() => {
@@ -17,6 +21,11 @@ export default function PwaRegister() {
 
         if (registration.waiting) {
           registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+
+        const endsAt = readPersistedCravingEndsAt();
+        if (endsAt && endsAt > Date.now()) {
+          await resyncCravingTimerInWorker(endsAt);
         }
       } catch (error) {
         console.warn("[pwa] service worker registration failed:", error);

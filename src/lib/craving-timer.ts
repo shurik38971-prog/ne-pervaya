@@ -5,6 +5,16 @@ export function persistCravingEndsAt(endsAt: number) {
   localStorage.setItem(CRAVING_ENDS_AT_KEY, String(endsAt));
 }
 
+export function readPersistedCravingEndsAt(): number | null {
+  if (typeof window === "undefined") return null;
+
+  const raw = localStorage.getItem(CRAVING_ENDS_AT_KEY);
+  if (!raw) return null;
+
+  const endsAt = Number(raw);
+  return Number.isFinite(endsAt) ? endsAt : null;
+}
+
 export function clearPersistedCravingEndsAt() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(CRAVING_ENDS_AT_KEY);
@@ -31,14 +41,17 @@ async function postToServiceWorker(message: Record<string, unknown>) {
   if (!("serviceWorker" in navigator)) return;
 
   const registration = await navigator.serviceWorker.ready;
+  const worker = registration.active ?? navigator.serviceWorker.controller;
+  if (!worker) return;
 
-  if (registration.active) {
-    registration.active.postMessage(message);
-  }
-
-  if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage(message);
-  }
+  // MessageChannel keeps the SW alive via waitUntil until the timer promise settles.
+  await new Promise<void>((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => resolve();
+    channel.port1.onmessageerror = () => resolve();
+    worker.postMessage({ ...message, _ackPort: channel.port2 }, [channel.port2]);
+    window.setTimeout(resolve, 3000);
+  });
 }
 
 export async function scheduleCravingTimerInWorker(endsAt: number) {
