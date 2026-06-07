@@ -19,6 +19,11 @@ type CravingModeProps = {
   onRelapse: () => void;
 };
 
+const triggerButtonClass = (isSelected: boolean) =>
+  `flex min-h-9 items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-xs font-bold transition-colors active:scale-95 ${
+    isSelected ? "bg-white text-red-500" : "bg-red-600 text-white"
+  }`;
+
 export default function CravingMode({
   secondsLeft,
   timerDone,
@@ -63,21 +68,21 @@ export default function CravingMode({
 
   if (cravingHelpStep === "pick_method") {
     return (
-      <section className="w-full min-w-0 rounded-3xl bg-emerald-600 p-4 text-center sm:p-5">
-        <p className="text-sm font-medium uppercase tracking-widest text-emerald-100/90">
+      <section className="w-full min-w-0 rounded-3xl bg-emerald-600 p-3 text-center">
+        <p className="text-xs font-medium uppercase tracking-widest text-emerald-100/90">
           Победа
         </p>
-        <h2 className="mt-4 text-2xl font-extrabold leading-tight sm:text-3xl">
+        <h2 className="mt-2 text-xl font-extrabold leading-tight">
           Что помогло тебе справиться?
         </h2>
 
-        <div className="mt-6 grid grid-cols-1 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-1.5">
           {helpedMethods.map((method) => (
             <button
               key={method.name}
               type="button"
               onClick={() => onSelectHelpedMethod(method.name)}
-              className="min-h-12 rounded-2xl bg-emerald-700 px-4 py-3 text-left text-sm font-bold text-white transition-colors active:scale-95 active:bg-emerald-800"
+              className="min-h-10 rounded-xl bg-emerald-700 px-2.5 py-2 text-left text-xs font-bold text-white transition-colors active:scale-95 active:bg-emerald-800"
             >
               {method.name}
             </button>
@@ -89,10 +94,10 @@ export default function CravingMode({
 
   if (cravingHelpStep === "success") {
     return (
-      <section className="w-full min-w-0 rounded-3xl bg-emerald-600 p-6 text-center sm:p-8">
-        <p className="text-4xl">✓</p>
-        <h2 className="mt-4 text-2xl font-extrabold sm:text-3xl">Отлично.</h2>
-        <p className="mt-4 text-lg font-medium leading-relaxed text-emerald-50">
+      <section className="w-full min-w-0 rounded-3xl bg-emerald-600 p-5 text-center">
+        <p className="text-3xl">✓</p>
+        <h2 className="mt-2 text-xl font-extrabold">Отлично.</h2>
+        <p className="mt-2 text-sm font-medium leading-snug text-emerald-50">
           Ты пережил ещё одну волну тяги.
         </p>
       </section>
@@ -100,12 +105,12 @@ export default function CravingMode({
   }
 
   return (
-    <section className="w-full min-w-0 rounded-3xl bg-red-500 p-4 text-center sm:p-5">
+    <section className="w-full min-w-0 rounded-3xl bg-red-500 p-3 text-center">
       {!timerDone ? (
         <>
-          <p className="text-lg font-semibold">Что произошло?</p>
+          <p className="text-sm font-semibold">Что произошло?</p>
 
-          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
             {triggers.map((trigger) => {
               const isSelected = selectedTrigger === trigger.name;
 
@@ -114,14 +119,10 @@ export default function CravingMode({
                   key={trigger.name}
                   type="button"
                   onClick={() => onSelectTrigger(trigger.name)}
-                  className={`flex min-h-12 items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-bold transition-colors active:scale-95 ${
-                    isSelected
-                      ? "bg-white text-red-500"
-                      : "bg-red-600 text-white"
-                  }`}
+                  className={triggerButtonClass(isSelected)}
                 >
                   <span
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-2 ${
                       isSelected
                         ? "border-red-500 bg-red-500"
                         : "border-white/70 bg-transparent"
@@ -129,27 +130,28 @@ export default function CravingMode({
                     aria-hidden
                   >
                     {isSelected && (
-                      <span className="h-2 w-2 rounded-full bg-white" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
                     )}
                   </span>
-                  {trigger.name}
+                  <span className="leading-tight">{trigger.name}</span>
                 </button>
               );
             })}
           </div>
 
-          <p className="mt-8 text-sm opacity-90">Переживи ближайшие 10 минут</p>
-
-          <p className="mt-4 text-5xl font-bold tabular-nums sm:text-6xl">
-            {minutes}:{seconds.toString().padStart(2, "0")}
-          </p>
+          <div className="mt-2.5">
+            <p className="text-[11px] opacity-90">Переживи ближайшие 10 минут</p>
+            <p className="mt-0.5 text-4xl font-bold tabular-nums leading-none">
+              {minutes}:{seconds.toString().padStart(2, "0")}
+            </p>
+          </div>
 
           {personalReason.trim() && (
-            <div className="mt-6 rounded-3xl border-2 border-white/25 bg-red-600/70 px-5 py-6 text-left shadow-lg shadow-black/25">
-              <p className="text-xs font-medium uppercase tracking-widest text-white/80">
+            <div className="mt-2 rounded-2xl border border-white/20 bg-red-600/70 px-3 py-2 text-left">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-white/75">
                 Ты сам написал:
               </p>
-              <p className="mt-3 text-xl font-semibold leading-relaxed text-white sm:text-2xl">
+              <p className="mt-1 text-sm font-semibold leading-snug text-white">
                 &ldquo;{personalReason}&rdquo;
               </p>
             </div>
@@ -157,22 +159,22 @@ export default function CravingMode({
 
           <RewireMessageCard message={rewirePick.message} variant="craving" />
 
-          <p className="mt-6 text-sm opacity-90">
+          <p className="mt-2 text-[10px] leading-tight opacity-75">
             Кнопки результата появятся, когда таймер дойдёт до нуля
           </p>
         </>
       ) : (
         <>
-          <p className="text-sm font-medium uppercase tracking-widest opacity-90">
+          <p className="text-xs font-medium uppercase tracking-widest opacity-90">
             Время вышло
           </p>
-          <p className="mt-4 text-4xl font-extrabold sm:text-5xl">0:00</p>
-          <p className="mt-5 text-lg font-semibold leading-relaxed">
+          <p className="mt-1 text-3xl font-extrabold tabular-nums">0:00</p>
+          <p className="mt-2 text-base font-semibold leading-snug">
             10 минут позади. Как ты?
           </p>
 
           {selectedTrigger && (
-            <p className="mt-4 rounded-2xl bg-red-600/50 px-4 py-3 text-sm">
+            <p className="mt-2 rounded-xl bg-red-600/50 px-3 py-2 text-xs">
               Триггер: {selectedTrigger}
             </p>
           )}
@@ -182,7 +184,7 @@ export default function CravingMode({
           <button
             type="button"
             onClick={onDeclareWin}
-            className="mt-8 min-h-14 w-full rounded-2xl bg-white py-4 text-lg font-bold text-red-500 active:scale-95"
+            className="mt-3 min-h-12 w-full rounded-2xl bg-white py-3 text-base font-bold text-red-500 active:scale-95"
           >
             Я справился
           </button>
@@ -190,7 +192,7 @@ export default function CravingMode({
           <button
             type="button"
             onClick={onRelapse}
-            className="mt-3 min-h-14 w-full rounded-2xl bg-red-700 py-4 text-lg font-bold text-white active:scale-95"
+            className="mt-2 min-h-12 w-full rounded-2xl bg-red-700 py-3 text-base font-bold text-white active:scale-95"
           >
             Я сорвался
           </button>

@@ -39,8 +39,8 @@ export default function AppShell() {
 
   const cravingOverlay =
     state.cravingMode && mounted ? (
-      <div className="overlay-scroll bg-zinc-950 px-4 py-6">
-        <div className="mx-auto w-full max-w-md py-2 pb-8">
+      <div className="fixed inset-0 z-50 flex h-[100dvh] items-center justify-center overflow-hidden bg-zinc-950 px-3 py-2">
+        <div className="mx-auto w-full max-w-md">
           <CravingMode
             secondsLeft={state.secondsLeft}
             timerDone={state.cravingTimerDone}
